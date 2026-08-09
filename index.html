@@ -36,10 +36,16 @@
     <button class="quick-card" onclick="openQuickTask()"><div class="quick-icon" data-icon="plus"></div><span>کار جدید</span></button>
     <button class="quick-card" onclick="switchPage('planner')"><div class="quick-icon" data-icon="planner"></div><span>تقویم</span></button>
     <button class="quick-card" onclick="switchPage('parking')"><div class="quick-icon" data-icon="parking"></div><span>پارکینگ</span></button>
+    <button class="quick-card voice-quick" onclick="openVoiceSession(true)"><div class="quick-icon" data-icon="mic"></div><span>صدای NOVA</span></button>
     <button class="quick-card" onclick="switchPage('chat')"><div class="quick-icon" data-icon="chat"></div><span>گفت‌وگو</span></button>
     <button class="quick-card" onclick="switchPage('projects')"><div class="quick-icon" data-icon="projects"></div><span>پروژه‌ها</span></button>
   </div>
   <div class="glass askbar"><textarea id="askInput" rows="1" placeholder="مثلاً: سه‌شنبه ساعت ۱۲ باید برم دفتر..."></textarea><button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button></div>
+  <div class="glass device-bridge-card">
+    <div class="bridge-icon" data-icon="link"></div>
+    <div class="bridge-copy"><b>Device Bridge</b><small id="bridgeState">در حال بررسی…</small></div>
+    <button class="project-action" onclick="openDeviceBridgeSetup()">تنظیم</button>
+  </div>
   <div class="section-title"><h3>قرار بعدی</h3></div><div class="glass card"><div id="nextEvent" style="font-size:12px;color:var(--muted);line-height:1.8"></div></div>
   <div class="section-title"><h3>کارهای امروز</h3></div><div class="glass card" id="homeTasks"></div>
 </section>
@@ -97,7 +103,7 @@
   <div class="project-pane" id="projectPaneProgress"></div>
 </section>
 
-<section class="page" id="chat"><div class="section-title"><h3>گفت‌وگو با NOVA</h3></div><div class="glass chat-panel"><div class="messages" id="messages"></div></div><div class="glass askbar"><textarea id="chatInput" rows="1" placeholder="فرمان یا سؤال..."></textarea><button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button></div></section>
+<section class="page" id="chat"><div class="section-title"><h3>گفت‌وگو با NOVA</h3><button class="voice-chat-btn" onclick="openVoiceSession(true)"><span data-icon="mic"></span><span>صوتی</span></button></div><div class="glass chat-panel"><div class="messages" id="messages"></div></div><div class="glass askbar"><textarea id="chatInput" rows="1" placeholder="فرمان یا سؤال..."></textarea><button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button></div></section>
 <div class="diagnostics" id="storageStatus">در حال آماده‌سازی ذخیره‌سازی…</div>
 </main>
 
@@ -108,6 +114,37 @@
   <button class="nav-item" data-page="today" onclick="switchPage('today')"><span data-icon="check"></span><span>کارها</span></button>
   <button class="nav-item" data-page="memory" onclick="switchPage('memory')"><span data-icon="memory"></span><span>حافظه</span></button>
 </div></nav>
+
+
+<div class="voice-overlay" id="voiceOverlay">
+  <div class="voice-panel">
+    <div class="voice-top">
+      <button class="voice-close" onclick="closeVoiceSession()">×</button>
+      <div><b>NOVA Voice</b><small id="voiceSupport">در حال بررسی…</small></div>
+      <div class="voice-mini-orb"></div>
+    </div>
+    <div class="voice-stage">
+      <button class="voice-orb" id="voiceOrb" onclick="startVoiceCapture()" aria-label="شروع مکالمه">
+        <span class="voice-core"></span>
+        <span class="voice-ring r1"></span><span class="voice-ring r2"></span><span class="voice-ring r3"></span>
+        <span class="voice-mic" data-icon="mic"></span>
+      </button>
+      <div class="voice-status" id="voiceStatus">برای صحبت لمس کن</div>
+      <div class="voice-wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
+    <div class="voice-transcript glass">
+      <small>شنیدم</small><div id="voiceTranscript">—</div>
+    </div>
+    <div class="voice-response glass">
+      <small>NOVA</small><div id="voiceResponse">آماده‌ام.</div>
+    </div>
+    <div class="voice-controls">
+      <label class="voice-switch"><input type="checkbox" id="voiceAutoContinue" onchange="toggleVoiceConversation(this)"><span></span><b>ادامه مکالمه</b></label>
+      <button id="bridgeFallback" class="voice-bridge-fallback" style="display:none" onclick="runBridgeFallback()">اجرای روی iPhone</button>
+    </div>
+    <div class="voice-hint">میکروفن فقط هنگام همین جلسه فعال می‌شود.</div>
+  </div>
+</div>
 
 <div class="sheet-overlay" id="eventSheet" onclick="closeEventSheet(event)"><div class="sheet glass" onclick="event.stopPropagation()"><div class="sheet-handle"></div><h3>برنامه جدید</h3><div class="form-grid">
   <div class="field full"><label>عنوان</label><input id="eventTitle" placeholder="مثلاً: رفتن به دفتر"></div>

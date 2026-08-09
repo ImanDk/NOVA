@@ -1,5 +1,5 @@
 {
-  "name": "NOVA — Personal Assistant",
+  "name": "NOVA — Voice Personal Assistant",
   "short_name": "NOVA",
   "lang": "fa",
   "dir": "rtl",
@@ -20,5 +20,5 @@
       "type": "image/png"
     }
   ],
-  "description": "Offline-first Persian personal assistant with planner and project management."
+  "description": "Offline-first Persian personal assistant with voice, planner, projects, and iPhone device bridge."
 }

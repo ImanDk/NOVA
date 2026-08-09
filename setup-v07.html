@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050713">
+<title>NOVA v0.7 Setup</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+.setup{max-width:560px;margin:auto;padding:calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 28px)}
+.setup h1{font-size:24px;margin:10px 0 5px}.setup>p{color:var(--muted);font-size:11px;line-height:1.8}
+.step{border-radius:23px;padding:15px;margin:11px 0}.step-no{width:32px;height:32px;border-radius:12px;display:grid;place-items:center;background:rgba(169,104,255,.12);color:#ddcaff;font-weight:700;margin-bottom:8px}
+.step h3{font-size:14px;margin:0 0 7px}.step p,.step li{font-size:10px;color:#b3bad0;line-height:1.9}.step ol{padding-right:18px}
+.code{direction:ltr;text-align:left;background:rgba(0,0,0,.25);border:1px solid var(--stroke2);padding:10px;border-radius:14px;font:10px ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;color:#d8ddeb;user-select:text!important;-webkit-user-select:text!important}
+.setup-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}
+</style>
+</head><body><main class="setup">
+<div class="brand"><div class="orb-sm"></div><div class="brand-copy"><b>NOVA</b><small>Device Bridge v0.7</small></div></div>
+<h1>اتصال NOVA به iPhone</h1>
+<p>این راه‌اندازی فقط یک‌بار انجام می‌شود. بعد از آن NOVA می‌تواند از طریق Shortcut، فرمان‌های زمان‌دار را به Calendar/Reminders آیفون منتقل کند.</p>
+
+<div class="glass step"><div class="step-no">۱</div><h3>Shortcut اول: NOVA Bridge</h3>
+<ol>
+<li>Shortcuts را باز کن و یک Shortcut جدید با نام دقیق <b>NOVA Bridge</b> بساز.</li>
+<li>ورودی Shortcut را Text/Any بگذار.</li>
+<li>اکشن <b>Get Dictionary from Input</b> را اضافه کن.</li>
+<li>مقدارهای type، title، startISO، alertISO و durationMin را از Dictionary بگیر.</li>
+<li>اگر type برابر event بود، با <b>Add New Event</b> یک Event در Calendar بساز.</li>
+<li>برای alertISO یک <b>Add New Reminder</b> بساز تا اعلان یادآوری جداگانه ایجاد شود.</li>
+<li>اگر type برابر reminder بود، فقط Reminder را در زمان startISO بساز.</li>
+</ol>
+<p>بار اول iOS برای Calendar و Reminders اجازه می‌خواهد؛ Allow را بزن.</p></div>
+
+<div class="glass step"><div class="step-no">۲</div><h3>Shortcut دوم: NOVA Action</h3>
+<ol>
+<li>Shortcut جدید با نام <b>NOVA Action</b> بساز.</li>
+<li>اکشن <b>Dictate Text</b> را اضافه کن و زبان را Persian/Farsi انتخاب کن.</li>
+<li>یک URL بساز که انتهای آن خروجی Dictate Text باشد:</li>
+</ol>
+<div class="code">https://imandk.github.io/NOVA/?mode=action&amp;cmd=[Dictated Text]</div>
+<ol start="4"><li>اکشن <b>Open URLs</b> را اضافه کن تا همین URL باز شود.</li></ol>
+</div>
+
+<div class="glass step"><div class="step-no">۳</div><h3>Action Button</h3>
+<ol>
+<li>Settings → Action Button را باز کن.</li>
+<li>Shortcut را انتخاب کن.</li>
+<li>Shortcut «NOVA Action» را انتخاب کن.</li>
+</ol>
+<p>بعد از این، فشار Action Button باید Dictation را شروع کند و فرمان را به NOVA بفرستد.</p></div>
+
+<div class="glass step"><div class="step-no">۴</div><h3>تست</h3>
+<p>بگو: «سه‌شنبه ساعت ۱۲ باید برم دفتر». NOVA باید اول با صدای فارسی جمله را تأیید کند، سپس Event را داخل خودش ذخیره کند و NOVA Bridge را اجرا کند.</p></div>
+
+<div class="setup-actions">
+<button class="primary" onclick="localStorage.setItem('nova_device_bridge_ready','1');location.href='./?v=70'">Bridge را ساختم</button>
+<button class="secondary" onclick="location.href='./?v=70'">بعداً انجام می‌دم</button>
+</div>
+</main></body></html>

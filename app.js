@@ -1,6 +1,8 @@
 
 import {openDB,all,put,remove,count} from "./db.js";
 import {pParts,pKey,pFull,pMonthTitle,pDayNum,pWeekday,monthCells,startOfWeek,addDays,parseNaturalEvent} from "./planner.js";
+import {configureVoiceSession,startListening,stopListening,speakFa,getVoiceSupport,setAutoContinue,getAutoContinue,continueListeningAfter,isListening} from "./voice.js";
+import {bridgeIsMarkedReady,setBridgeReady,launchNativeBridge,buildShortcutURL,makeBridgePayload} from "./device-bridge.js";
 
 const $=id=>document.getElementById(id);
 const now=()=>Date.now();
@@ -11,6 +13,9 @@ const ICONS={
  parking:`<svg viewBox="0 0 24 24"><path d="M5 19c4-1 6-4 6-8 0-3 2-5 5-5 2 0 3 1 3 3 0 3-3 5-7 5"/><circle cx="6" cy="19" r="2"/></svg>`,
  memory:`<svg viewBox="0 0 24 24"><path d="M8 4h8a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>`,
  chat:`<svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4Z"/></svg>`,
+ mic:`<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg>`,
+ wave:`<svg viewBox="0 0 24 24"><path d="M3 12h2l2-5 3 10 3-13 3 15 2-7h3"/></svg>`,
+ link:`<svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg>`,
  projects:`<svg viewBox="0 0 24 24"><path d="M4 7h6l2 2h8v10H4Z"/><path d="M4 7V5h6l2 2"/></svg>`,
  trash:`<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg>`,
  plus:`<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>`,
@@ -21,6 +26,8 @@ let currentProjectId=null;
 let lastDeletedTask=null;
 let currentProjectTab="overview";
 let planner={view:"month",anchor:new Date(),selected:new Date()};
+let voiceSessionOpen=false;
+let pendingBridgeIntent=null;
 
 function icon(n){return ICONS[n]||ICONS.home}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
@@ -70,6 +77,11 @@ async function migrateLocalStorage(){
 }
 function wire(){
   document.querySelectorAll("[data-icon]").forEach(el=>el.innerHTML=icon(el.dataset.icon));
+  configureVoiceSession({
+    onFinal:(text)=>handleVoiceCommand(text,{fromRecognition:true}),
+    onStatus:(s)=>renderVoiceStatus(s),
+    onInterim:(t)=>{const el=$("voiceTranscript");if(el)el.textContent=t}
+  });
   $("dateText").textContent=pFull(new Date());
   document.querySelectorAll(".view-switch button").forEach(b=>b.onclick=()=>{planner.view=b.dataset.view;document.querySelectorAll(".view-switch button").forEach(x=>x.classList.toggle("active",x===b));renderPlanner()});
   $("askInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();askNOVA()}});
@@ -185,7 +197,7 @@ window.askNOVA=async()=>{
 window.openQuickTask=()=>{$("taskSheet").classList.add("show");$("taskTitle").focus()}
 window.closeTaskSheet=e=>{if(!e||e.target.id==="taskSheet")$("taskSheet").classList.remove("show")}
 window.saveTask=async()=>{const t=$("taskTitle").value.trim();if(!t)return;await put("tasks",{id:now(),title:t,time:$("taskWhen").value||"امروز",done:false,createdAt:now()});$("taskTitle").value="";$("taskSheet").classList.remove("show");await loadState();renderAll();toast("کار اضافه شد")}
-window.showDiagnostics=async()=>{const est=await navigator.storage?.estimate?.();alert(`NOVA v0.6\nTasks: ${state.tasks.length}\nEvents: ${state.events.length}\nMemory: ${state.memory.length}\nStorage: ${est?Math.round((est.usage||0)/1024/1024)+" MB":"unknown"}\nWebGPU: ${navigator.gpu?"yes":"no"}`)}
+window.showDiagnostics=async()=>{const est=await navigator.storage?.estimate?.();const vs=getVoiceSupport();alert(`NOVA v0.7\nTasks: ${state.tasks.length}\nEvents: ${state.events.length}\nProjects: ${state.projects.length}\nStorage: ${est?Math.round((est.usage||0)/1024/1024)+" MB":"unknown"}\nVoice Output: ${vs.synthesis?"yes":"no"}\nVoice Input: ${vs.recognition?"yes":"no"}\nPersian Voice: ${vs.persianVoice?"yes":"fallback"}\nDevice Bridge: ${bridgeIsMarkedReady()?"ready":"setup needed"}`)}
 
 window.deleteDoneTask=async id=>{
   const t=state.tasks.find(x=>x.id===id);if(!t)return;
@@ -308,7 +320,225 @@ document.addEventListener("pointerdown",e=>{
   b.classList.remove("icon-pop");void b.offsetWidth;b.classList.add("icon-pop");
 },{passive:true});
 
+
+function minutesBeforeISO(startISO,minutes=60){
+  const d=new Date(startISO);d.setMinutes(d.getMinutes()-minutes);return d.toISOString()
+}
+function localVoiceIntent(text){
+  const q=normalize(text);
+  if(!q)return {type:"none"};
+
+  if(q.includes("ساعت")&&(q.includes("چنده")||q.includes("چند است")||q.includes("چند"))){
+    return {type:"answer",answer:`الان ساعت ${faTime(new Date())} است.`};
+  }
+  if(q.includes("امروز")&&(q.includes("چه کار")||q.includes("برنامه"))){
+    const open=state.tasks.filter(t=>!t.done).slice(0,3);
+    const ev=eventsFor(new Date()).slice(0,3);
+    let parts=[];
+    if(ev.length)parts.push(`${faNum(ev.length)} برنامه زمان‌دار داری`);
+    if(open.length)parts.push(`${faNum(open.length)} کار باز داری`);
+    return {type:"answer",answer:parts.length?`امروز ${parts.join(" و ")}.`:"برای امروز چیزی ثبت نشده."};
+  }
+  if(q.includes("پارکینگ")&&(q.includes("بذار")||q.includes("بزار")||q.includes("ثبت"))){
+    let title=q.replace(/.*پارکینگ/,"").replace(/^(بذار|بزار|ثبت کن|تو)/,"").trim();
+    if(!title)title="یادداشت";
+    return {type:"parking",title};
+  }
+
+  const parsed=parseNaturalEvent(q);
+  const looksTimed=!!parsed;
+  const reminderWords=q.includes("یادم بنداز")||q.includes("یادآوری کن");
+  const eventWords=/جلسه|قرار|ملاقات|باید برم|باید بروم|می‌رم|میرم|می روم/.test(q);
+
+  if(looksTimed && reminderWords){
+    return {...parsed,type:"reminder",alertBeforeMin:0,
+      confirmation:`باشه، ${pFull(new Date(parsed.startISO))} ساعت ${faTime(new Date(parsed.startISO))} یادت می‌اندازم که ${parsed.title}.`};
+  }
+  if(looksTimed && eventWords){
+    return {...parsed,type:"event",alertBeforeMin:60,
+      confirmation:`باشه، ${pFull(new Date(parsed.startISO))} ساعت ${faTime(new Date(parsed.startISO))} ثبتش می‌کنم. یک ساعت قبل هم یادت می‌اندازم.`};
+  }
+  if(looksTimed){
+    return {...parsed,type:"event",alertBeforeMin:60,
+      confirmation:`باشه، برای ${pFull(new Date(parsed.startISO))} ساعت ${faTime(new Date(parsed.startISO))} ثبتش می‌کنم و یک ساعت قبل یادت می‌اندازم.`};
+  }
+
+  if(reminderWords){
+    const title=q.replace("یادم بنداز","").replace("یادآوری کن","").trim()||"یادآوری";
+    return {type:"task",title,time:"یادآوری NOVA",confirmation:`باشه، «${title}» رو به کارهات اضافه می‌کنم.`};
+  }
+  if(/اضافه کن|کار جدید|تسک/.test(q)){
+    const title=q.replace(/کار جدید|تسک|اضافه کن|به کارهام|به کارها/g,"").trim()||q;
+    return {type:"task",title,time:"امروز",confirmation:`باشه، «${title}» رو به کارهات اضافه می‌کنم.`};
+  }
+  return {type:"conversation",text:q};
+}
+
+async function persistVoiceIntent(intent){
+  const id=now();
+  if(intent.type==="event"){
+    const event={id,title:intent.title,startISO:intent.startISO,durationMin:intent.durationMin||60,
+      alertBeforeMin:intent.alertBeforeMin??60,location:"",notes:"ثبت‌شده با NOVA Voice",type:"event",createdAt:now()};
+    await put("events",event);
+    await loadState();planner.selected=new Date(event.startISO);planner.anchor=new Date(event.startISO);renderAll();
+    return {...event,alertISO:minutesBeforeISO(event.startISO,event.alertBeforeMin)};
+  }
+  if(intent.type==="reminder"){
+    const event={id,title:intent.title,startISO:intent.startISO,durationMin:0,alertBeforeMin:0,
+      location:"",notes:"یادآوری صوتی NOVA",type:"reminder",createdAt:now()};
+    await put("events",event);await loadState();renderAll();
+    return {...event,alertISO:event.startISO};
+  }
+  if(intent.type==="task"){
+    const task={id,title:intent.title,time:intent.time||"امروز",done:false,createdAt:now()};
+    await put("tasks",task);await loadState();renderAll();return task;
+  }
+  if(intent.type==="parking"){
+    const p={id,text:intent.title,createdAt:now()};await put("parking",p);await loadState();renderAll();return p;
+  }
+  return intent;
+}
+
+async function conversationReply(text){
+  const q=normalize(text);
+  if(q.includes("خودت رو معرفی")||q.includes("خودتو معرفی")){
+    return "من نووا هستم؛ دستیار شخصی تو برای برنامه‌ریزی، یادآوری، تمرکز، پروژه‌ها و تصمیم‌گیری.";
+  }
+  if(q.includes("چه کار")&&q.includes("مونده")){
+    const open=state.tasks.filter(t=>!t.done);
+    return open.length?`${faNum(open.length)} کار باز داری. مهم‌ترین‌ها: ${open.slice(0,3).map(t=>t.title).join("، ")}.`:"کار بازی باقی نمونده.";
+  }
+  return "این سؤال به تحلیل هوشمندتر نیاز داره. فعلاً هسته صوتی و فرمان‌های محلی فعاله و موتور هوش ترکیبی در مرحله بعد کامل می‌شه.";
+}
+
+window.handleVoiceCommand=async(text,{fromRecognition=false,fromAction=false}={})=>{
+  const clean=normalize(text);if(!clean)return;
+  voiceSessionOpen=true;
+  $("voiceTranscript").textContent=clean;
+  renderVoiceStatus("processing");
+  await pushChat("user",clean);
+
+  const intent=localVoiceIntent(clean);
+
+  if(intent.type==="answer"){
+    $("voiceResponse").textContent=intent.answer;
+    await pushChat("ai",intent.answer);
+    renderVoiceStatus("speaking");
+    await speakFa(intent.answer);
+    renderVoiceStatus("idle");
+    if(fromRecognition&&getAutoContinue())continueListeningAfter(650);
+    return;
+  }
+
+  if(intent.type==="conversation"){
+    const reply=await conversationReply(clean);
+    $("voiceResponse").textContent=reply;
+    await pushChat("ai",reply);
+    renderVoiceStatus("speaking");
+    await speakFa(reply);
+    renderVoiceStatus("idle");
+    if(fromRecognition&&getAutoContinue())continueListeningAfter(700);
+    return;
+  }
+
+  const confirm=intent.confirmation || (intent.type==="parking"?"باشه، گذاشتمش تو پارکینگ.":"باشه، انجامش می‌دم.");
+  $("voiceResponse").textContent=confirm;
+  await pushChat("ai",confirm);
+
+  // Confirm understanding first, then apply the low-risk action.
+  renderVoiceStatus("speaking");
+  await speakFa(confirm);
+  renderVoiceStatus("applying");
+
+  const saved=await persistVoiceIntent(intent);
+
+  if(intent.type==="event"||intent.type==="reminder"){
+    pendingBridgeIntent={...saved,type:intent.type};
+    const bridgeResult=launchNativeBridge(pendingBridgeIntent);
+    if(!bridgeResult.launched){
+      $("bridgeFallback").style.display="inline-flex";
+      $("bridgeFallback").dataset.url=bridgeResult.url;
+      if(bridgeResult.reason==="not-ready"){
+        toast("داخل NOVA ثبت شد؛ برای هشدار واقعی آیفون Device Bridge را یک‌بار فعال کن")
+      }
+    }
+  }else{
+    toast(intent.type==="parking"?"در پارکینگ ثبت شد":"ثبت شد");
+  }
+
+  renderVoiceStatus("done");
+  setTimeout(()=>renderVoiceStatus("idle"),900);
+  if(fromRecognition&&getAutoContinue() && !(intent.type==="event"||intent.type==="reminder")) continueListeningAfter(900);
+}
+
+window.openVoiceSession=(autoStart=false)=>{
+  voiceSessionOpen=true;$("voiceOverlay").classList.add("show");
+  $("voiceTranscript").textContent="";$("voiceResponse").textContent="آماده‌ام.";
+  const support=getVoiceSupport();
+  $("voiceSupport").textContent=support.recognition?"ورودی صوتی آماده":"ورودی صوتی وب روی این دستگاه در دسترس نیست؛ از Action Button/Dictation استفاده کن";
+  $("voiceAutoContinue").checked=getAutoContinue();
+  renderVoiceStatus("idle");
+  if(autoStart)setTimeout(()=>startVoiceCapture(),280);
+}
+window.closeVoiceSession=()=>{
+  voiceSessionOpen=false;stopListening();$("voiceOverlay").classList.remove("show");
+}
+window.startVoiceCapture=()=>{
+  if(isListening()){stopListening();renderVoiceStatus("idle");return}
+  const ok=startListening();
+  if(!ok)toast("Speech Recognition در این Web App در دسترس نیست؛ مسیر Action Button را استفاده کن");
+}
+window.toggleVoiceConversation=el=>{
+  setAutoContinue(!!el.checked);
+  toast(el.checked?"حالت مکالمه روشن شد":"حالت مکالمه خاموش شد")
+}
+window.renderVoiceStatus=s=>{
+  const orb=$("voiceOrb"),lab=$("voiceStatus");if(!orb||!lab)return;
+  orb.classList.remove("listening","processing","speaking","applying","done");
+  const labels={idle:"برای صحبت لمس کن",listening:"دارم گوش می‌دم…",hearing:"صدات رو گرفتم…",processing:"دارم می‌فهمم…",
+    speaking:"NOVA در حال پاسخ…",applying:"در حال اجرا…",done:"انجام شد",unsupported:"ورودی صوتی پشتیبانی نمی‌شه",
+    permission:"اجازه میکروفن داده نشده",error:"خطای ورودی صوتی"};
+  if(["listening","hearing"].includes(s))orb.classList.add("listening");
+  else if(["processing"].includes(s))orb.classList.add("processing");
+  else if(s==="speaking")orb.classList.add("speaking");
+  else if(s==="applying")orb.classList.add("applying");
+  else if(s==="done")orb.classList.add("done");
+  lab.textContent=labels[s]||labels.idle;
+}
+window.runBridgeFallback=()=>{
+  const u=$("bridgeFallback").dataset.url;if(u)window.location.href=u;
+}
+window.openDeviceBridgeSetup=()=>{window.location.href="./setup-v07.html"}
+window.markBridgeReady=()=>{
+  setBridgeReady(true);renderBridgeSetupState();toast("Device Bridge به‌عنوان آماده ثبت شد")
+}
+window.markBridgeNotReady=()=>{
+  setBridgeReady(false);renderBridgeSetupState();toast("Device Bridge غیرفعال شد")
+}
+function renderBridgeSetupState(){
+  const s=$("bridgeState");if(!s)return;
+  s.textContent=bridgeIsMarkedReady()?"Device Bridge آماده است":"نیاز به راه‌اندازی یک‌باره";
+  s.classList.toggle("ready",bridgeIsMarkedReady());
+}
+
+async function processActionMode(){
+  const url=new URL(location.href),mode=url.searchParams.get("mode"),cmd=url.searchParams.get("cmd");
+  if(mode==="voice"){
+    switchPage("home");openVoiceSession(true);return;
+  }
+  if(mode==="action"&&cmd){
+    switchPage("home");openVoiceSession(false);
+    $("voiceTranscript").textContent=cmd;
+    await handleVoiceCommand(cmd,{fromAction:true});
+    return;
+  }
+  if(mode==="return"){
+    toast("اجرای iPhone تکمیل شد");
+  }
+}
+
 init();
+setTimeout(()=>{renderBridgeSetupState();processActionMode()},400);
 
 if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").catch(console.error)}
 
