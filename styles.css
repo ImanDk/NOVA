@@ -459,3 +459,158 @@ p,label,
 .task-pane.active{display:block}
 .task-pane-pop{animation:taskTabIn .26s var(--ease)}
 @keyframes taskTabIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+
+/* ==========================================================
+   NOVA v0.7.2 — Consensus UX Polish
+   Three-user review: speed / planning / iPhone visual quality
+   ========================================================== */
+
+/* 1) Hierarchy + lower GPU cost: only key surfaces use blur */
+.glass{
+  backdrop-filter:blur(10px) saturate(112%) !important;
+  -webkit-backdrop-filter:blur(10px) saturate(112%) !important;
+}
+.card,.month-card,.timeline,.day-focus,.project-detail-head,.project-card,
+.project-task-list,.project-planner-card,.project-progress-card,.project-overview-card{
+  backdrop-filter:none !important;-webkit-backdrop-filter:none !important;
+}
+.surface-primary{
+  position:relative;background:linear-gradient(145deg,rgba(20,27,52,.91),rgba(9,13,29,.88));
+  border:1px solid rgba(255,255,255,.085);border-radius:28px;
+  box-shadow:0 22px 55px rgba(0,0,0,.29),inset 0 1px 0 rgba(255,255,255,.075);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+.surface-card{
+  background:linear-gradient(180deg,rgba(255,255,255,.052),rgba(255,255,255,.026));
+  border:1px solid rgba(255,255,255,.065);border-radius:22px;
+  box-shadow:0 10px 26px rgba(0,0,0,.15),inset 0 1px 0 rgba(255,255,255,.035);
+}
+.surface-chat{
+  background:linear-gradient(180deg,rgba(15,20,39,.88),rgba(8,11,25,.90));
+  border:1px solid rgba(158,106,255,.14);border-radius:24px;
+  box-shadow:0 16px 42px rgba(0,0,0,.23),0 0 34px rgba(106,70,255,.055);
+}
+
+/* 2) Readability */
+body{font-size:14px}
+.brand-copy small,.planner-title span,.task-copy small,.pt-meta,.project-card p,
+.project-empty,.timeline-empty,.voice-hint,.voice-top small,.settings-row small,
+.next-card small,.home-bridge-alert small{font-size:11px !important}
+.quick-card span,.summary-stat span,.event-box small,.chip,.time-pill,.project-action,
+.linkbtn,.field label,.nav-item{font-size:11px !important}
+.section-title h3{font-size:17px}
+.task-copy b,.event-box b,.project-card h3,.project-schedule-item b{font-size:14px}
+
+/* 3) Home = one clear command center */
+.home-focus{display:grid;grid-template-columns:1fr 104px;gap:14px;padding:18px;margin-bottom:11px;overflow:hidden}
+.home-focus::before{content:"";position:absolute;width:210px;height:210px;border-radius:50%;left:-95px;top:-110px;background:radial-gradient(circle,rgba(156,88,255,.16),transparent 66%)}
+.home-focus-copy{position:relative;z-index:1}
+.eyebrow{display:inline-flex;color:#b99bff;font-size:11px;margin-bottom:7px}
+.home-focus h1{font-size:22px;line-height:1.35;margin:0 0 6px;font-weight:630}
+.home-focus p{font-size:12px;line-height:1.8;margin:0;color:var(--muted)}
+.home-focus-actions{display:flex;gap:7px;margin-top:13px}
+.focus-action{border:1px solid var(--stroke2);border-radius:14px;padding:8px 10px;background:rgba(255,255,255,.035);color:#dce1ef;display:flex;align-items:center;gap:6px;font-size:10px}
+.focus-action svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.9}
+.focus-action.primary-soft{background:rgba(163,99,255,.105);border-color:rgba(163,99,255,.15);color:#e7d9ff}
+.home-orb-wrap{align-self:center;text-align:center;position:relative;z-index:1;color:var(--muted);font-size:9px}
+.home-orb{width:88px;height:88px;margin:auto;border-radius:50%;background:
+  radial-gradient(circle at 29% 23%,rgba(255,255,255,.62),transparent 22%),
+  radial-gradient(circle at 72% 74%,rgba(76,205,255,.25),transparent 28%),
+  linear-gradient(145deg,#7651d1,#355e9e);
+  border:1px solid rgba(255,255,255,.16);box-shadow:0 17px 40px rgba(93,65,218,.24),inset 0 2px 7px rgba(255,255,255,.16);
+  transition:.22s var(--spring)
+}
+.home-orb:active{transform:scale(.94)}
+.home-orb-wrap span{display:block;margin-top:6px}
+.home-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:8px}
+.stat-tile{background:rgba(255,255,255,.028);border:1px solid var(--stroke2);border-radius:17px;padding:10px;text-align:center}
+.stat-tile span{display:block;font-size:10px;color:var(--muted);margin-bottom:3px}.stat-tile b{font-size:17px}
+.home-progress{padding:8px 3px 12px}
+.home-progress>div:first-child{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:7px}
+.home-progress-track{height:6px;border-radius:99px;background:rgba(255,255,255,.055);overflow:hidden}
+.home-progress-track i{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#9e62ff,#5d7cff);transition:width .5s var(--ease)}
+.home-command{margin-top:0 !important;margin-bottom:11px}
+.next-card{padding:13px 14px}.next-card b{display:block;font-size:14px;margin-bottom:4px}.next-card small{display:block;color:var(--muted);line-height:1.7}
+.task-home-card{padding:4px 14px}
+.home-bridge-alert{align-items:center;justify-content:space-between;gap:10px;border-radius:17px;padding:10px 11px;margin:0 0 10px;background:rgba(255,190,92,.055);border:1px solid rgba(255,197,99,.10)}
+.home-bridge-alert b{font-size:11px;display:block;margin-bottom:2px}.home-bridge-alert small{color:#b9a77e}.home-bridge-alert button{border:0;border-radius:12px;padding:7px 9px;background:rgba(255,201,112,.10);color:#e9c982;font-size:10px}
+
+/* 4) Six actions = balanced 3x2 */
+.quick-grid-six{grid-template-columns:repeat(3,1fr) !important;gap:8px}
+.quick-card{min-height:76px;padding:10px 6px !important}
+.quick-icon{width:39px;height:39px;margin-bottom:7px}
+
+/* 5) Central NOVA in bottom nav */
+.navinner.nav-five{grid-template-columns:1fr 1fr 74px 1fr 1fr;align-items:end;overflow:visible}
+.nav-voice{border:0;background:transparent;color:#cdb8ff;padding:0 2px 5px;display:grid;place-items:center;gap:3px;transform:translateY(-13px)}
+.nav-voice-core{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:
+ radial-gradient(circle at 29% 25%,rgba(255,255,255,.62),transparent 22%),
+ linear-gradient(145deg,#9b5bf3,#536cff);
+ border:1px solid rgba(255,255,255,.18);box-shadow:0 15px 34px rgba(89,69,236,.34),0 0 32px rgba(133,77,255,.15),inset 0 1px 6px rgba(255,255,255,.16);
+ transition:.2s var(--spring)
+}
+.nav-voice-core svg{width:23px;height:23px;stroke:white;fill:none;stroke-width:1.8}
+.nav-voice small{font-size:8px;letter-spacing:.07em}
+.nav-voice.is-pressing .nav-voice-core{transform:scale(.88);box-shadow:0 7px 18px rgba(89,69,236,.20)}
+.nav-item.active{transform:translateY(-2px) !important}
+
+/* 6 & 7) Chat feels like a live assistant */
+.chat-page{min-height:calc(100dvh - 145px)}
+.chat-live-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.chat-presence{display:flex;align-items:center;gap:9px}
+.chat-presence h3{font-size:18px;margin:0 0 2px}.chat-presence small{font-size:10px;color:var(--green)}
+.chat-presence-orb{width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 30% 24%,rgba(255,255,255,.58),transparent 24%),linear-gradient(145deg,#8c58dc,#426da8);border:1px solid rgba(255,255,255,.14);box-shadow:0 8px 22px rgba(99,68,225,.17)}
+.chat-panel{min-height:calc(100dvh - 285px);max-height:none !important;padding:14px}
+.messages{max-height:none !important;min-height:calc(100dvh - 315px);padding-bottom:12px}
+.bubble{font-size:14px;max-width:86%;padding:12px 14px}
+.chat-composer{position:sticky;bottom:calc(env(safe-area-inset-bottom) + 86px);z-index:22;padding-top:8px;background:linear-gradient(180deg,transparent,rgba(5,7,19,.90) 30%)}
+.chat-composer .askbar{margin:0;border-color:rgba(165,107,255,.18);box-shadow:0 15px 34px rgba(0,0,0,.25),0 0 27px rgba(109,73,255,.07)}
+.composer-mic{width:39px;height:39px;flex:0 0 39px;border-radius:50%;border:1px solid rgba(169,104,255,.13);background:rgba(169,104,255,.07);color:#d9c7ff;display:grid;place-items:center}
+.composer-mic svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
+
+/* 8) Device bridge lives in Settings after setup */
+.settings-sheet{background:rgba(11,15,31,.96);border:1px solid rgba(255,255,255,.08);box-shadow:0 30px 75px rgba(0,0,0,.45)}
+.settings-title{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px}
+.settings-title h3{margin:0 0 3px;font-size:18px}.settings-title p{margin:0;font-size:10px;color:var(--muted)}
+.sheet-close{width:35px;height:35px;border-radius:12px;border:1px solid var(--stroke2);background:rgba(255,255,255,.03);color:white;font-size:20px}
+.settings-row{width:100%;display:grid;grid-template-columns:42px 1fr 20px;align-items:center;gap:9px;text-align:right;border:0;border-bottom:1px solid var(--stroke2);padding:11px 3px;background:transparent;color:var(--text)}
+.settings-row:last-child{border-bottom:0}.settings-row-icon{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;background:rgba(169,104,255,.075);color:#cdb8ff}
+.settings-row-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
+.settings-row b{display:block;font-size:12px;margin-bottom:3px}.settings-row small{display:block;color:var(--muted)}.settings-row>span{color:var(--muted);font-size:17px}
+
+/* 9) Persian date picker everywhere user sees a date */
+.date-field{width:100%;min-height:43px;text-align:right;border:1px solid var(--stroke2);background:rgba(255,255,255,.045);color:#e7eaf4;border-radius:15px;padding:10px 12px}
+.persian-date-sheet{background:rgba(11,15,31,.97);border:1px solid rgba(255,255,255,.08)}
+.persian-picker-head{display:grid;grid-template-columns:38px 1fr 38px;align-items:center;gap:8px;margin-bottom:10px}
+.persian-picker-head b{text-align:center;font-size:15px}.persian-picker-head button{height:36px;border-radius:12px;border:1px solid var(--stroke2);background:rgba(255,255,255,.03);color:white}
+.persian-picker-grid .day-cell{min-height:46px}
+.picker-selected{text-align:center;font-size:11px;color:#c9cee0;padding:10px 0 4px}
+
+/* 10) Project dashboard emphasizes action + deadline */
+.project-next{margin-top:12px;padding:10px 11px;border-radius:15px;background:rgba(162,98,255,.07);border:1px solid rgba(162,98,255,.10)}
+.project-next span{display:block;color:#aa92da;font-size:9px;margin-bottom:3px}.project-next b{display:block;font-size:12px;margin-bottom:3px}.project-next small{font-size:10px;color:var(--muted)}
+.project-next.quiet{background:rgba(88,224,182,.045);border-color:rgba(88,224,182,.08)}
+.next-action-feature{padding:13px;border-radius:18px;background:linear-gradient(145deg,rgba(162,98,255,.10),rgba(84,112,255,.045));border:1px solid rgba(162,98,255,.10);margin-bottom:11px}
+.next-action-feature span{font-size:10px;color:#b59cdf}.next-action-feature h3{font-size:16px;margin:5px 0 3px}.next-action-feature p{font-size:11px;color:var(--muted);margin:0}
+.done-feature{background:rgba(88,224,182,.045);border-color:rgba(88,224,182,.08)}
+.chart-head{display:flex;justify-content:space-between;font-size:11px;margin-bottom:8px}
+
+/* 11) Mobile uses press/release, not hover as primary interaction */
+button.is-pressing{transform:translateY(1px) scale(.955) !important;filter:brightness(1.10)}
+@media (hover:none){
+  .quick-card:hover,.icon-btn:hover,.project-card:hover,.ask-orb:hover{transform:none !important;box-shadow:inherit}
+}
+
+/* 12) Slightly less decorative glow */
+.project-card,.quick-card,.task-row,.event-box{box-shadow:inset 0 1px 0 rgba(255,255,255,.035) !important}
+.chat-panel::before,.chat-panel::after{opacity:.48}
+
+/* Small iPhone width */
+@media(max-width:390px){
+  .home-focus{grid-template-columns:1fr 86px;padding:15px}
+  .home-orb{width:76px;height:76px}
+  .home-focus h1{font-size:20px}
+  .navinner.nav-five{grid-template-columns:1fr 1fr 68px 1fr 1fr}
+  .nav-voice-core{width:54px;height:54px}
+}

@@ -18,36 +18,58 @@
 <main class="app-shell">
 <header class="topbar">
   <div class="brand"><div class="orb-sm"></div><div class="brand-copy"><b>NOVA</b><small id="dateText"></small></div></div>
-  <button class="icon-btn" onclick="showDiagnostics()" aria-label="Diagnostics"><span data-icon="sliders"></span></button>
+  <button class="icon-btn" onclick="openSettingsSheet()" aria-label="تنظیمات"><span data-icon="sliders"></span></button>
 </header>
 
 <section class="page active" id="home">
-  <div class="glass hero">
-    <div class="orb-lg"></div><h1>NOVA</h1><p>دستیار شخصی برای برنامه، تمرکز، تقویم و یادآوری.</p>
-    <div class="daily-summary">
-      <div class="summary-main"><div class="mini-ring" id="progressRing"><b id="sumProgress">۰٪</b></div><div><span style="font-size:9px;color:var(--muted)">وضعیت روز</span><br><b style="font-size:13px">در جریان</b></div></div>
-      <div class="summary-stat"><span>کارهای مانده</span><b id="sumTasks">۰</b></div>
-      <div class="summary-stat"><span>انجام‌شده</span><b id="sumDone">۰</b></div>
-      <div class="summary-stat"><span>تمرکز</span><b>۲۵د</b></div>
+  <div class="home-focus surface-primary">
+    <div class="home-focus-copy">
+      <span class="eyebrow">الان</span>
+      <h1 id="homeNowTitle">برنامه امروز</h1>
+      <p id="homeNowMeta">NOVA در حال آماده‌سازی برنامه است.</p>
+      <div class="home-focus-actions">
+        <button class="focus-action primary-soft" onclick="openVoiceSession(true)"><span data-icon="mic"></span><b>صحبت با NOVA</b></button>
+        <button class="focus-action" onclick="switchPage('today')"><span data-icon="check"></span><b>کارها</b></button>
+      </div>
+    </div>
+    <div class="home-orb-wrap" onclick="openVoiceSession(true)">
+      <div class="home-orb"></div>
+      <span>Voice</span>
     </div>
   </div>
+
+  <div class="home-stats">
+    <div class="stat-tile"><span>کارهای باز</span><b id="sumTasks">۰</b></div>
+    <div class="stat-tile"><span>انجام‌شده</span><b id="sumDone">۰</b></div>
+    <div class="stat-tile"><span>پروژه فعال</span><b id="sumProjects">۰</b></div>
+  </div>
+  <div class="home-progress"><div><span>پیشرفت کارها</span><b id="sumProgress">۰٪</b></div><div class="home-progress-track"><i id="homeProgressFill"></i></div></div>
+
+  <div class="askbar home-command">
+    <textarea id="askInput" rows="1" placeholder="مثلاً: سه‌شنبه ساعت ۱۲ باید برم دفتر..."></textarea>
+    <button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button>
+  </div>
+
+  <div class="home-bridge-alert" id="homeBridgeAlert" style="display:none">
+    <div><b>هشدارهای iPhone هنوز متصل نیست</b><small>Device Bridge را یک‌بار راه‌اندازی کن.</small></div>
+    <button onclick="openDeviceBridgeSetup()">راه‌اندازی</button>
+  </div>
+
   <div class="section-title"><h3>دسترسی سریع</h3></div>
-  <div class="quick-grid">
-    <button class="quick-card" onclick="openQuickTask()"><div class="quick-icon" data-icon="plus"></div><span>کار جدید</span></button>
-    <button class="quick-card" onclick="switchPage('planner')"><div class="quick-icon" data-icon="planner"></div><span>تقویم</span></button>
-    <button class="quick-card" onclick="switchPage('parking')"><div class="quick-icon" data-icon="parking"></div><span>پارکینگ</span></button>
-    <button class="quick-card voice-quick" onclick="openVoiceSession(true)"><div class="quick-icon" data-icon="mic"></div><span>صدای NOVA</span></button>
+  <div class="quick-grid quick-grid-six">
+    <button class="quick-card voice-quick" onclick="openVoiceSession(true)"><div class="quick-icon" data-icon="mic"></div><span>صدا</span></button>
     <button class="quick-card" onclick="switchPage('chat')"><div class="quick-icon" data-icon="chat"></div><span>گفت‌وگو</span></button>
+    <button class="quick-card" onclick="switchPage('planner')"><div class="quick-icon" data-icon="planner"></div><span>تقویم</span></button>
+    <button class="quick-card" onclick="switchPage('today')"><div class="quick-icon" data-icon="check"></div><span>کارها</span></button>
     <button class="quick-card" onclick="switchPage('projects')"><div class="quick-icon" data-icon="projects"></div><span>پروژه‌ها</span></button>
+    <button class="quick-card" onclick="switchPage('parking')"><div class="quick-icon" data-icon="parking"></div><span>پارکینگ</span></button>
   </div>
-  <div class="glass askbar"><textarea id="askInput" rows="1" placeholder="مثلاً: سه‌شنبه ساعت ۱۲ باید برم دفتر..."></textarea><button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button></div>
-  <div class="glass device-bridge-card">
-    <div class="bridge-icon" data-icon="link"></div>
-    <div class="bridge-copy"><b>Device Bridge</b><small id="bridgeState">در حال بررسی…</small></div>
-    <button class="project-action" onclick="openDeviceBridgeSetup()">تنظیم</button>
-  </div>
-  <div class="section-title"><h3>قرار بعدی</h3></div><div class="glass card"><div id="nextEvent" style="font-size:12px;color:var(--muted);line-height:1.8"></div></div>
-  <div class="section-title"><h3>کارهای امروز</h3></div><div class="glass card" id="homeTasks"></div>
+
+  <div class="section-title"><h3>قرار بعدی</h3><button class="linkbtn" onclick="switchPage('planner')">تقویم</button></div>
+  <div class="surface-card next-card"><div id="nextEvent"></div></div>
+
+  <div class="section-title"><h3>کارهای بعدی</h3><button class="linkbtn" onclick="switchPage('today')">همه کارها</button></div>
+  <div class="surface-card task-home-card" id="homeTasks"></div>
 </section>
 
 <section class="page" id="planner">
@@ -114,18 +136,73 @@
   <div class="project-pane" id="projectPaneProgress"></div>
 </section>
 
-<section class="page" id="chat"><div class="section-title"><h3>گفت‌وگو با NOVA</h3><button class="voice-chat-btn" onclick="openVoiceSession(true)"><span data-icon="mic"></span><span>صوتی</span></button></div><div class="glass chat-panel"><div class="messages" id="messages"></div></div><div class="glass askbar"><textarea id="chatInput" rows="1" placeholder="فرمان یا سؤال..."></textarea><button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button></div></section>
+<section class="page chat-page" id="chat">
+  <div class="chat-live-head">
+    <div class="chat-presence">
+      <div class="chat-presence-orb"></div>
+      <div><h3>گفت‌وگو با NOVA</h3><small>آماده دریافت فرمان</small></div>
+    </div>
+    <button class="voice-chat-btn" onclick="openVoiceSession(true)"><span data-icon="mic"></span><span>صوتی</span></button>
+  </div>
+  <div class="chat-panel surface-chat"><div class="messages" id="messages"></div></div>
+  <div class="chat-composer">
+    <div class="askbar">
+      <textarea id="chatInput" rows="1" placeholder="فرمان یا سؤال..."></textarea>
+      <button class="composer-mic" onclick="openVoiceSession(true)"><span data-icon="mic"></span></button>
+      <button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button>
+    </div>
+  </div>
+</section>
 <div class="diagnostics" id="storageStatus">در حال آماده‌سازی ذخیره‌سازی…</div>
 </main>
 
-<nav class="bottomnav"><div class="navinner">
+<nav class="bottomnav"><div class="navinner nav-five">
   <button class="nav-item active" data-page="home" onclick="switchPage('home')"><span data-icon="home"></span><span>خانه</span></button>
   <button class="nav-item" data-page="planner" onclick="switchPage('planner')"><span data-icon="planner"></span><span>تقویم</span></button>
+  <button class="nav-voice" onclick="openVoiceSession(true)" aria-label="NOVA Voice"><span class="nav-voice-core"><span data-icon="mic"></span></span><small>NOVA</small></button>
   <button class="nav-item" data-page="projects" onclick="switchPage('projects')"><span data-icon="projects"></span><span>پروژه‌ها</span></button>
   <button class="nav-item" data-page="today" onclick="switchPage('today')"><span data-icon="check"></span><span>کارها</span></button>
-  <button class="nav-item" data-page="memory" onclick="switchPage('memory')"><span data-icon="memory"></span><span>حافظه</span></button>
 </div></nav>
 
+
+
+<div class="sheet-overlay" id="settingsSheet" onclick="closeSettingsSheet(event)">
+  <div class="sheet settings-sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="settings-title"><div><h3>تنظیمات NOVA</h3><p>دسترسی‌های کم‌استفاده و وضعیت اتصال</p></div><button class="sheet-close" onclick="closeSettingsSheet()">×</button></div>
+
+    <button class="settings-row" onclick="closeSettingsSheet();switchPage('memory')">
+      <div class="settings-row-icon" data-icon="memory"></div>
+      <div><b>حافظه NOVA</b><small>مشاهده چیزهایی که NOVA ذخیره کرده</small></div><span>‹</span>
+    </button>
+    <button class="settings-row" onclick="openDeviceBridgeSetup()">
+      <div class="settings-row-icon" data-icon="link"></div>
+      <div><b>Device Bridge</b><small id="bridgeState">در حال بررسی…</small></div><span>‹</span>
+    </button>
+    <button class="settings-row" onclick="showDiagnostics()">
+      <div class="settings-row-icon" data-icon="wave"></div>
+      <div><b>وضعیت سیستم</b><small>Storage، Voice و اتصال دستگاه</small></div><span>‹</span>
+    </button>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="persianDateSheet" onclick="closePersianDatePicker(event)">
+  <div class="sheet persian-date-sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="persian-picker-head">
+      <button onclick="shiftPersianPickerMonth(-1)">‹</button>
+      <b id="persianPickerTitle"></b>
+      <button onclick="shiftPersianPickerMonth(1)">›</button>
+    </div>
+    <div class="week-labels persian-week-labels"><span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span>ج</span></div>
+    <div class="month-grid persian-picker-grid" id="persianPickerGrid"></div>
+    <div class="picker-selected" id="persianPickerSelected"></div>
+    <div class="sheet-actions">
+      <button class="secondary" id="persianPickerClear" onclick="clearPersianDate()">بدون تاریخ</button>
+      <button class="primary" onclick="confirmPersianDate()">انتخاب تاریخ</button>
+    </div>
+  </div>
+</div>
 
 <div class="voice-overlay" id="voiceOverlay">
   <div class="voice-panel">
@@ -175,8 +252,8 @@
     <div class="form-grid">
       <div class="field full"><label>نام پروژه</label><input id="projectTitle" placeholder="مثلاً: طراحی سایت NOVA"></div>
       <div class="field full"><label>هدف / توضیح</label><input id="projectDescription" placeholder="هدف اصلی پروژه"></div>
-      <div class="field"><label>تاریخ شروع</label><input id="projectStart" type="date"></div>
-      <div class="field"><label>تاریخ پایان</label><input id="projectEnd" type="date"></div>
+      <div class="field"><label>تاریخ شروع</label><button type="button" class="date-field" id="projectStartLabel" onclick="openPersianDatePicker('projectStart','projectStartLabel',false)">انتخاب تاریخ</button><input id="projectStart" type="hidden"></div>
+      <div class="field"><label>تاریخ پایان</label><button type="button" class="date-field" id="projectEndLabel" onclick="openPersianDatePicker('projectEnd','projectEndLabel',true)">بدون تاریخ</button><input id="projectEnd" type="hidden"></div>
       <div class="field full"><label>وضعیت</label><select id="projectStatus"><option value="active">فعال</option><option value="paused">متوقف</option><option value="done">تکمیل‌شده</option></select></div>
     </div>
     <button class="primary" style="width:100%" onclick="saveProject()">ساخت پروژه</button>
@@ -188,7 +265,7 @@
     <div class="sheet-handle"></div><h3>کار پروژه</h3>
     <div class="form-grid">
       <div class="field full"><label>عنوان کار</label><input id="projectTaskTitle" placeholder="مثلاً: طراحی صفحه اصلی"></div>
-      <div class="field"><label>تاریخ</label><input id="projectTaskDate" type="date"></div>
+      <div class="field"><label>تاریخ</label><button type="button" class="date-field" id="projectTaskDateLabel" onclick="openPersianDatePicker('projectTaskDate','projectTaskDateLabel',true)">انتخاب تاریخ</button><input id="projectTaskDate" type="hidden"></div>
       <div class="field"><label>ساعت</label><input id="projectTaskTime" type="time" value="09:00"></div>
       <div class="field"><label>اولویت</label><select id="projectTaskPriority"><option value="normal">عادی</option><option value="high">مهم</option><option value="low">کم</option></select></div>
       <div class="field"><label>افزودن به تقویم</label><select id="projectTaskCalendar"><option value="yes">بله</option><option value="no">خیر</option></select></div>

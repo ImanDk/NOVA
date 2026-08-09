@@ -29,6 +29,7 @@ let planner={view:"month",anchor:new Date(),selected:new Date()};
 let voiceSessionOpen=false;
 let pendingBridgeIntent=null;
 let currentTaskTab="open";
+let persianPicker={hiddenId:null,labelId:null,anchor:new Date(),selected:new Date(),allowEmpty:false};
 
 function icon(n){return ICONS[n]||ICONS.home}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
@@ -92,11 +93,35 @@ function renderAll(){
 }
 function renderHome(){
   const done=state.tasks.filter(t=>t.done).length,total=state.tasks.length,open=total-done,pct=total?Math.round(done/total*100):0;
-  $("sumProgress").textContent=faNum(pct)+"٪";$("progressRing").style.background=`conic-gradient(var(--purple) 0 ${pct}%,rgba(255,255,255,.08) ${pct}%)`;
-  $("sumTasks").textContent=faNum(open);$("sumDone").textContent=faNum(done);
-  $("homeTasks").innerHTML=state.tasks.filter(t=>!t.done).slice(0,3).map(taskRow).join("")||empty("کار بازی نداری.");
+  const activeProjects=state.projects.filter(p=>p.status!=="done").length;
+  $("sumProgress").textContent=faNum(pct)+"٪";
+  $("sumTasks").textContent=faNum(open);
+  $("sumDone").textContent=faNum(done);
+  if($("sumProjects"))$("sumProjects").textContent=faNum(activeProjects);
+  if($("homeProgressFill"))$("homeProgressFill").style.width=pct+"%";
+
+  const openTasks=state.tasks.filter(t=>!t.done);
+  $("homeTasks").innerHTML=openTasks.slice(0,3).map(taskRow).join("")||empty("کار بازی نداری.");
+
   const next=state.events.filter(e=>new Date(e.startISO)>new Date()).sort((a,b)=>new Date(a.startISO)-new Date(b.startISO))[0];
-  $("nextEvent").textContent=next?`${next.title} · ${pFull(new Date(next.startISO))}، ${faTime(new Date(next.startISO))}`:"قرار بعدی ثبت نشده.";
+  $("nextEvent").innerHTML=next
+    ? `<b>${esc(next.title)}</b><small>${pFull(new Date(next.startISO))} · ${faTime(new Date(next.startISO))}</small>`
+    : `<b>قرار بعدی ثبت نشده</b><small>از تقویم یا با صدای NOVA یک برنامه اضافه کن.</small>`;
+
+  const nowTitle=$("homeNowTitle"),nowMeta=$("homeNowMeta");
+  if(next && (new Date(next.startISO)-new Date()) < 6*60*60*1000){
+    nowTitle.textContent=next.title;
+    nowMeta.textContent=`قرار بعدی · ${pFull(new Date(next.startISO))} ساعت ${faTime(new Date(next.startISO))}`;
+  }else if(openTasks.length){
+    nowTitle.textContent=openTasks[0].title;
+    nowMeta.textContent="پیشنهاد NOVA برای کار بعدی؛ یک کار را تمام کن و بعد سراغ بعدی برو.";
+  }else if(next){
+    nowTitle.textContent="برنامه‌ات تحت کنترل است";
+    nowMeta.textContent=`قرار بعدی: ${next.title} · ${faTime(new Date(next.startISO))}`;
+  }else{
+    nowTitle.textContent="فعلاً کار فوری نداری";
+    nowMeta.textContent="می‌تونی یک کار، قرار یا پروژه جدید به NOVA بگی.";
+  }
 }
 function taskRow(t){return `<div class="task-row"><button class="task-check ${t.done?"done":""}" onclick="toggleTask(${t.id})">${icon("check")}</button><div class="task-copy"><b>${esc(t.title)}</b><small>${t.done?"انجام شده":"در انتظار انجام"}</small></div><span class="time-pill">${esc(t.time||"امروز")}</span></div>`}
 
@@ -239,22 +264,40 @@ function projectProgress(id){
 }
 function projectStatusLabel(s){return s==="done"?"تکمیل‌شده":s==="paused"?"متوقف":"فعال"}
 function dateValue(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function parseStoredDate(v){
+  if(!v)return null;
+  const [y,m,d]=String(v).split("-").map(Number);
+  if(!y||!m||!d)return null;
+  return new Date(y,m-1,d,12,0,0,0);
+}
+function formatStoredDate(v){
+  const d=parseStoredDate(v);return d?pFull(d):"";
+}
+function shortPersianDate(d){
+  return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{weekday:"short",month:"short",day:"numeric"}).format(d);
+}
 
 function renderProjects(){
   const root=$("projectsList");if(!root)return;
   if(!state.projects.length){
-    root.innerHTML=`<div class="glass project-empty">هنوز پروژه‌ای ساخته نشده.<br><button class="primary" style="margin-top:12px" onclick="openProjectSheet()">ساخت اولین پروژه</button></div>`;return;
+    root.innerHTML=`<div class="surface-card project-empty">هنوز پروژه‌ای ساخته نشده.<br><button class="primary" style="margin-top:14px" onclick="openProjectSheet()">ساخت اولین پروژه</button></div>`;return;
   }
   root.innerHTML=state.projects.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(p=>{
     const pr=projectProgress(p.id);
-    const tasks=projectTasks(p.id).filter(t=>!t.done).sort((a,b)=>(a.dueISO||"").localeCompare(b.dueISO||""));
-    const next=tasks.find(t=>t.dueISO);
+    const tasks=projectTasks(p.id).filter(t=>!t.done).sort((a,b)=>(a.dueISO||"9999").localeCompare(b.dueISO||"9999"));
+    const next=tasks[0]||null;
+    const due=next?.dueISO?new Date(next.dueISO):null;
     return `<button class="project-card" onclick="openProject(${p.id})">
-      <div class="project-card-head"><div><h3>${esc(p.title)}</h3><p>${esc(p.description||"بدون توضیح")}</p></div><div class="project-percent">${faNum(pr.pct)}٪</div></div>
+      <div class="project-card-head">
+        <div><h3>${esc(p.title)}</h3><p>${esc(p.description||"بدون توضیح")}</p></div>
+        <div class="project-percent">${faNum(pr.pct)}٪</div>
+      </div>
+      ${next?`<div class="project-next"><span>اقدام بعدی</span><b>${esc(next.title)}</b><small>${due?`${shortPersianDate(due)} · ${faTime(due)}`:"بدون زمان مشخص"}</small></div>`:`<div class="project-next quiet"><span>اقدام بعدی</span><b>کاری باقی نمانده</b></div>`}
       <div class="progress-track"><div class="progress-fill" style="width:${pr.pct}%"></div></div>
       <div class="project-stats">
-        <span class="chip">${faNum(pr.total)} کار</span><span class="chip">${faNum(pr.done)} انجام‌شده</span><span class="chip">${faNum(pr.left)} باقی</span>
-        <span class="chip">${projectStatusLabel(p.status)}</span>${next?`<span class="chip">بعدی: ${esc(next.title)}</span>`:""}
+        <span class="chip">${faNum(pr.done)} / ${faNum(pr.total)} انجام</span>
+        <span class="chip">${faNum(pr.left)} باقی</span>
+        ${p.end?`<span class="chip">پایان: ${formatStoredDate(p.end)}</span>`:""}
       </div>
     </button>`
   }).join("");
@@ -262,13 +305,14 @@ function renderProjects(){
 
 window.openProjectSheet=()=>{
   $("projectSheet").classList.add("show");$("projectTitle").focus();
-  $("projectStart").value=dateValue();$("projectEnd").value="";
+  $("projectStart").value=dateValue();$("projectStartLabel").textContent=pFull(new Date());
+  $("projectEnd").value="";$("projectEndLabel").textContent="بدون تاریخ";
 }
 window.closeProjectSheet=e=>{if(!e||e.target.id==="projectSheet")$("projectSheet").classList.remove("show")}
 window.saveProject=async()=>{
   const title=$("projectTitle").value.trim();if(!title)return toast("نام پروژه رو وارد کن");
   const p={id:now(),title,description:$("projectDescription").value.trim(),start:$("projectStart").value,end:$("projectEnd").value,status:$("projectStatus").value||"active",createdAt:now()};
-  await put("projects",p);$("projectSheet").classList.remove("show");["projectTitle","projectDescription","projectEnd"].forEach(id=>$(id).value="");
+  await put("projects",p);$("projectSheet").classList.remove("show");["projectTitle","projectDescription","projectEnd"].forEach(id=>$(id).value="");$("projectEndLabel").textContent="بدون تاریخ";
   await loadState();renderAll();toast("پروژه ساخته شد");openProject(p.id)
 }
 window.openProject=id=>{currentProjectId=id;currentProjectTab="overview";switchPage("projectDetail");renderProjectDetail()}
@@ -281,19 +325,24 @@ window.switchProjectTab=tab=>{
 function renderProjectDetail(){
   const p=state.projects.find(x=>x.id===currentProjectId);if(!p)return;
   const pr=projectProgress(p.id),pts=projectTasks(p.id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  const openPts=pts.filter(t=>!t.done).sort((a,b)=>(a.dueISO||"9999").localeCompare(b.dueISO||"9999"));
+  const nextAction=openPts[0]||null;
   $("projectDetailTitle").textContent=p.title;$("projectDetailDesc").textContent=p.description||"بدون توضیح";
   $("projectProgressText").textContent=faNum(pr.pct)+"٪";
   $("projectProgressRing").style.background=`conic-gradient(var(--purple) 0 ${pr.pct}%,rgba(255,255,255,.06) ${pr.pct}%)`;
-  $("projectMetaChips").innerHTML=`<span class="chip">${projectStatusLabel(p.status)}</span>${p.start?`<span class="chip">شروع: ${esc(p.start)}</span>`:""}${p.end?`<span class="chip">پایان: ${esc(p.end)}</span>`:""}`;
-  $("projectPaneOverview").innerHTML=`<div class="glass card">
+  $("projectMetaChips").innerHTML=`<span class="chip">${projectStatusLabel(p.status)}</span>${p.start?`<span class="chip">شروع: ${formatStoredDate(p.start)}</span>`:""}${p.end?`<span class="chip">پایان: ${formatStoredDate(p.end)}</span>`:""}`;
+
+  $("projectPaneOverview").innerHTML=`<div class="surface-card project-overview-card">
+    ${nextAction?`<div class="next-action-feature"><span>اقدام بعدی</span><h3>${esc(nextAction.title)}</h3><p>${nextAction.dueISO?`${pFull(new Date(nextAction.dueISO))} · ${faTime(new Date(nextAction.dueISO))}`:"بدون زمان مشخص"}</p></div>`:`<div class="next-action-feature done-feature"><span>وضعیت</span><h3>همه کارهای پروژه انجام شده</h3></div>`}
     <div class="project-kpis"><div class="kpi"><b>${faNum(pr.total)}</b><span>کل کارها</span></div><div class="kpi"><b>${faNum(pr.done)}</b><span>انجام‌شده</span></div><div class="kpi"><b>${faNum(pr.left)}</b><span>باقی‌مانده</span></div></div>
-    <div class="project-overall-chart"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:8px"><span>پیشرفت پروژه</span><b>${faNum(pr.pct)}٪</b></div><div class="bar"><i style="width:${pr.pct}%"></i></div></div>
-    <button class="primary" style="width:100%;margin-top:12px" onclick="openProjectTaskSheet()">+ افزودن کار پروژه</button>
+    <div class="project-overall-chart"><div class="chart-head"><span>پیشرفت پروژه</span><b>${faNum(pr.pct)}٪</b></div><div class="bar"><i style="width:${pr.pct}%"></i></div></div>
+    <button class="primary" style="width:100%;margin-top:14px" onclick="openProjectTaskSheet()">+ افزودن کار پروژه</button>
   </div>`;
-  $("projectPaneTasks").innerHTML=`<div class="glass card">${pts.length?pts.map(pt=>projectTaskRow(pt)).join(""):'<div class="project-empty">کاری برای این پروژه ثبت نشده.</div>'}<button class="primary" style="width:100%;margin-top:10px" onclick="openProjectTaskSheet()">+ کار جدید</button></div>`;
+
+  $("projectPaneTasks").innerHTML=`<div class="surface-card project-task-list">${pts.length?pts.map(pt=>projectTaskRow(pt)).join(""):'<div class="project-empty">کاری برای این پروژه ثبت نشده.</div>'}<button class="primary" style="width:100%;margin-top:12px" onclick="openProjectTaskSheet()">+ کار جدید</button></div>`;
   const scheduled=pts.filter(t=>t.dueISO).sort((a,b)=>new Date(a.dueISO)-new Date(b.dueISO));
-  $("projectPanePlanner").innerHTML=`<div class="glass card">${scheduled.length?scheduled.map(t=>`<div class="project-schedule-item"><div class="project-schedule-time">${faTime(new Date(t.dueISO))}<br>${new Intl.DateTimeFormat("fa-IR-u-ca-persian",{month:"short",day:"numeric"}).format(new Date(t.dueISO))}</div><div><b style="font-size:12px">${esc(t.title)}</b><div class="pt-meta">${t.addToCalendar?"در تقویم NOVA":"فقط پروژه"} · ${t.done?"انجام شده":"باز"}</div></div></div>`).join(""):'<div class="project-empty">برنامه زمان‌داری ثبت نشده.</div>'}<button class="primary" style="width:100%;margin-top:10px" onclick="openProjectTaskSheet()">+ برنامه‌ریزی کار</button></div>`;
-  $("projectPaneProgress").innerHTML=`<div class="glass card"><div class="project-kpis"><div class="kpi"><b>${faNum(pr.pct)}٪</b><span>پیشرفت</span></div><div class="kpi"><b>${faNum(pr.done)}</b><span>تکمیل</span></div><div class="kpi"><b>${faNum(pr.left)}</b><span>باز</span></div></div><div class="project-overall-chart"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:9px"><span>درصد تکمیل بر اساس کارها</span><b>${faNum(pr.done)} / ${faNum(pr.total)}</b></div><div class="bar"><i style="width:${pr.pct}%"></i></div></div></div>`;
+  $("projectPanePlanner").innerHTML=`<div class="surface-card project-planner-card">${scheduled.length?scheduled.map(t=>`<div class="project-schedule-item"><div class="project-schedule-time">${faTime(new Date(t.dueISO))}<br>${new Intl.DateTimeFormat("fa-IR-u-ca-persian",{month:"short",day:"numeric"}).format(new Date(t.dueISO))}</div><div><b>${esc(t.title)}</b><div class="pt-meta">${t.addToCalendar?"در تقویم NOVA":"فقط پروژه"} · ${t.done?"انجام شده":"باز"}</div></div></div>`).join(""):'<div class="project-empty">برنامه زمان‌داری ثبت نشده.</div>'}<button class="primary" style="width:100%;margin-top:12px" onclick="openProjectTaskSheet()">+ برنامه‌ریزی کار</button></div>`;
+  $("projectPaneProgress").innerHTML=`<div class="surface-card project-progress-card"><div class="project-kpis"><div class="kpi"><b>${faNum(pr.pct)}٪</b><span>پیشرفت</span></div><div class="kpi"><b>${faNum(pr.done)}</b><span>تکمیل</span></div><div class="kpi"><b>${faNum(pr.left)}</b><span>باز</span></div></div><div class="project-overall-chart"><div class="chart-head"><span>درصد تکمیل بر اساس کارها</span><b>${faNum(pr.done)} / ${faNum(pr.total)}</b></div><div class="bar"><i style="width:${pr.pct}%"></i></div></div></div>`;
   switchProjectTab(currentProjectTab);
 }
 function projectTaskRow(t){
@@ -305,7 +354,8 @@ function projectTaskRow(t){
 }
 window.openProjectTaskSheet=()=>{
   if(!currentProjectId)return;
-  $("projectTaskSheet").classList.add("show");$("projectTaskTitle").focus();$("projectTaskDate").value=dateValue();
+  $("projectTaskSheet").classList.add("show");$("projectTaskTitle").focus();
+  $("projectTaskDate").value=dateValue();$("projectTaskDateLabel").textContent=pFull(new Date());
 }
 window.closeProjectTaskSheet=e=>{if(!e||e.target.id==="projectTaskSheet")$("projectTaskSheet").classList.remove("show")}
 window.saveProjectTask=async()=>{
@@ -334,12 +384,57 @@ window.deleteProjectTask=async id=>{
   await loadState();renderAll();renderProjectDetail();toast("کار پروژه حذف شد")
 };
 
-/* tactile visual response on tap */
+/* tactile visual response on touch / pointer */
 document.addEventListener("pointerdown",e=>{
   const b=e.target.closest("button");if(!b)return;
-  b.classList.remove("icon-pop");void b.offsetWidth;b.classList.add("icon-pop");
+  b.classList.remove("icon-pop");void b.offsetWidth;b.classList.add("icon-pop","is-pressing");
 },{passive:true});
+["pointerup","pointercancel","pointerleave"].forEach(type=>document.addEventListener(type,e=>{
+  const b=e.target.closest?.("button");if(b)b.classList.remove("is-pressing");
+},{passive:true}));
 
+
+
+window.openSettingsSheet=()=>{$("settingsSheet").classList.add("show");renderBridgeSetupState()}
+window.closeSettingsSheet=e=>{if(!e||e.target?.id==="settingsSheet")$("settingsSheet").classList.remove("show")}
+
+window.openPersianDatePicker=(hiddenId,labelId,allowEmpty=false)=>{
+  persianPicker.hiddenId=hiddenId;persianPicker.labelId=labelId;persianPicker.allowEmpty=!!allowEmpty;
+  const current=parseStoredDate($(hiddenId).value)||new Date();
+  persianPicker.selected=current;persianPicker.anchor=current;
+  $("persianPickerClear").style.visibility=allowEmpty?"visible":"hidden";
+  renderPersianPicker();$("persianDateSheet").classList.add("show");
+}
+window.closePersianDatePicker=e=>{if(!e||e.target?.id==="persianDateSheet")$("persianDateSheet").classList.remove("show")}
+window.shiftPersianPickerMonth=dir=>{
+  const range=monthCells(persianPicker.anchor);
+  persianPicker.anchor=dir>0?addDays(range.end,1):addDays(range.start,-1);
+  renderPersianPicker();
+}
+window.selectPersianPickerDate=iso=>{
+  persianPicker.selected=new Date(iso);persianPicker.anchor=new Date(iso);renderPersianPicker();
+}
+function renderPersianPicker(){
+  $("persianPickerTitle").textContent=pMonthTitle(persianPicker.anchor);
+  $("persianPickerSelected").textContent=pFull(persianPicker.selected);
+  const {cells}=monthCells(persianPicker.anchor),anchorParts=pParts(persianPicker.anchor),today=new Date();
+  $("persianPickerGrid").innerHTML=cells.map(d=>{
+    const pp=pParts(d),inside=pp.month===anchorParts.month&&pp.year===anchorParts.year;
+    return `<button class="day-cell ${inside?"":"muted"} ${isSameDay(d,today)?"today":""} ${isSameDay(d,persianPicker.selected)?"selected":""}" onclick="selectPersianPickerDate('${d.toISOString()}')"><b>${pDayNum(d)}</b></button>`
+  }).join("");
+}
+window.confirmPersianDate=()=>{
+  if(!persianPicker.hiddenId)return;
+  $(persianPicker.hiddenId).value=dateValue(persianPicker.selected);
+  $(persianPicker.labelId).textContent=pFull(persianPicker.selected);
+  $("persianDateSheet").classList.remove("show");
+}
+window.clearPersianDate=()=>{
+  if(!persianPicker.allowEmpty||!persianPicker.hiddenId)return;
+  $(persianPicker.hiddenId).value="";
+  $(persianPicker.labelId).textContent="بدون تاریخ";
+  $("persianDateSheet").classList.remove("show");
+}
 
 function minutesBeforeISO(startISO,minutes=60){
   const d=new Date(startISO);d.setMinutes(d.getMinutes()-minutes);return d.toISOString()
@@ -536,9 +631,14 @@ window.markBridgeNotReady=()=>{
   setBridgeReady(false);renderBridgeSetupState();toast("Device Bridge غیرفعال شد")
 }
 function renderBridgeSetupState(){
-  const s=$("bridgeState");if(!s)return;
-  s.textContent=bridgeIsMarkedReady()?"Device Bridge آماده است":"نیاز به راه‌اندازی یک‌باره";
-  s.classList.toggle("ready",bridgeIsMarkedReady());
+  const ready=bridgeIsMarkedReady();
+  const s=$("bridgeState");
+  if(s){
+    s.textContent=ready?"آماده و متصل":"نیاز به راه‌اندازی یک‌باره";
+    s.classList.toggle("ready",ready);
+  }
+  const alert=$("homeBridgeAlert");
+  if(alert)alert.style.display=ready?"none":"flex";
 }
 
 async function processActionMode(){
