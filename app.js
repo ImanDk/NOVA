@@ -311,3 +311,42 @@ document.addEventListener("pointerdown",e=>{
 init();
 
 if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").catch(console.error)}
+
+
+/* ===== iOS UI selection hard-stop ===== */
+(function(){
+  const editable = el => !!el && !!el.closest?.('input,textarea,[contenteditable="true"],.allow-select');
+
+  document.addEventListener('selectstart', e => {
+    if(!editable(e.target)) e.preventDefault();
+  }, {capture:true});
+
+  document.addEventListener('contextmenu', e => {
+    if(!editable(e.target)) e.preventDefault();
+  }, {capture:true});
+
+  document.addEventListener('dragstart', e => {
+    if(!editable(e.target)) e.preventDefault();
+  }, {capture:true});
+
+  document.addEventListener('selectionchange', () => {
+    const active = document.activeElement;
+    if(editable(active)) return;
+    const sel = window.getSelection?.();
+    if(sel && sel.rangeCount && !sel.isCollapsed){
+      try{ sel.removeAllRanges(); }catch(_){}
+    }
+  });
+
+  // iOS can create a selection just after a long touch; clear it again after touch end.
+  document.addEventListener('touchend', e => {
+    if(editable(e.target)) return;
+    setTimeout(() => {
+      const sel = window.getSelection?.();
+      if(sel && !sel.isCollapsed){
+        try{ sel.removeAllRanges(); }catch(_){}
+      }
+    }, 0);
+  }, {passive:true,capture:true});
+})();
+
