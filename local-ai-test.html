@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#070b14">
-<title>NOVA — Local AI Test</title>
+<title>NOVA — Local AI Persona Test</title>
 <style>
 @font-face{font-family:Dana;src:url("./fonts/dana-light.woff2") format("woff2");font-weight:300;font-style:normal;font-display:swap}
 @font-face{font-family:Dana;src:url("./fonts/dana-regular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
@@ -68,19 +68,31 @@ input{
 .send{width:54px;flex:0 0 54px}
 .note{padding:14px 16px;font-size:11px;line-height:1.9;color:var(--muted)}
 .err{color:var(--bad)}
+
+.approval{
+  display:none;margin-top:12px;padding:13px;border-radius:18px;
+  background:rgba(255,209,102,.07);border:1px solid rgba(255,209,102,.18)
+}
+.approval.show{display:block}
+.approval-title{font-size:12px;font-weight:400;color:#ffe08a;margin-bottom:6px}
+.approval-text{font-size:11px;line-height:1.8;color:var(--muted);margin-bottom:10px}
+.approval-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.approve{background:linear-gradient(135deg,rgba(84,209,159,.82),rgba(58,157,255,.82))}
+.cancel{background:rgba(255,255,255,.055)}
+
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
     <div class="orb"></div>
-    <div><div class="logo">NOVA</div><div class="sub">Local Intelligence Test</div></div>
+    <div><div class="logo">NOVA</div><div class="sub">Local Intelligence • Smart Approval</div></div>
   </div>
 
   <div class="glass hero">
     <h1>اولین اجرای هوش روی خود آیفون</h1>
-    <p>این نسخه فقط موتور اجرای AI محلی را تست می‌کند. مدل آزمایشی کوچک است و مغز نهایی NOVA نیست.</p>
-    <div class="badge"><span class="dot"></span>بدون API برای تولید پاسخ</div>
+    <p>این نسخه شخصیت ثابت NOVA و تأیید هوشمند را تست می‌کند؛ کارهای ساده بدون مزاحمت انجام می‌شوند و فقط دسترسی‌ها و اقدامات حساس تأیید می‌خواهند.</p>
+    <div class="badge"><span class="dot"></span>AI محلی + تأیید فقط برای موارد حساس</div>
   </div>
 
   <div class="glass panel">
@@ -91,28 +103,124 @@ input{
   </div>
 
   <div class="glass chat" id="chatBox" style="display:none">
-    <div class="msg ai" id="aiMsg">مدل آماده است. یک جمله کوتاه بفرست تا مطمئن شویم پاسخ روی خود آیفون تولید می‌شود.</div>
+    <div class="msg ai" id="aiMsg">مدل آماده است. بپرس «تو کی هستی؟» یا یک کار از NOVA بخواه.</div>
     <div class="field">
-      <input id="prompt" value="سلام نووا، خیلی کوتاه خودت را معرفی کن." />
+      <input id="prompt" value="نووا، خودت را معرفی کن." />
       <button class="send primary" id="sendBtn" onclick="ask()">➤</button>
+    </div>
+
+    <div class="approval" id="approvalBox">
+      <div class="approval-title">تأیید لازم است</div>
+      <div class="approval-text" id="approvalText">این کار شامل دسترسی یا اقدام حساس است.</div>
+      <div class="approval-actions">
+        <button class="approve" onclick="approvePending()">تأیید می‌کنم</button>
+        <button class="cancel" onclick="cancelPending()">لغو</button>
+      </div>
     </div>
   </div>
 
   <div class="glass note">
-    اینترنت در بار اول فقط برای دریافت کتابخانه WebLLM و فایل‌های مدل لازم است. بعد از آماده‌شدن مدل، تولید پاسخ توسط WebGPU روی همین دستگاه انجام می‌شود. این مدل کوچک فقط برای تست موتور است؛ بعد از تأیید، سراغ مدل مناسب‌تر برای فارسی و حافظه شخصی NOVA می‌رویم.
+    اینترنت در بار اول فقط برای دریافت کتابخانه WebLLM و فایل‌های مدل لازم است. بعد از آماده‌شدن مدل، تولید پاسخ توسط WebGPU روی همین دستگاه انجام می‌شود. شخصیت NOVA و تشخیص تأیید داخل خود برنامه قرار گرفته‌اند و به مدل واگذار نشده‌اند. کارهای ساده مزاحمت تأیید ندارند؛ فقط موارد حساس قفل می‌شوند. این مدل کوچک هنوز فقط برای تست موتور است.
   </div>
 </div>
 
 <script type="module">
 let engine=null;
+let pendingAction=null;
 const modelId="SmolLM2-360M-Instruct-q4f32_1-MLC";
 const $=id=>document.getElementById(id);
+
+const NOVA_IDENTITY = `من NOVA هستم؛ دستیار هوشمند شخصی تو.
+برای برنامه‌ریزی، تصمیم‌گیری، یادآوری، تمرکز، ثبت افکار و کارهایی که به NOVA متصل می‌کنیم کنارت هستم.
+می‌تونم پیشنهاد بدم، تحلیل کنم و کارها رو آماده کنم؛ اما هیچ اقدام واقعی‌ای را بدون تأیید صریح تو انجام نمی‌دم.`;
+
+const SYSTEM_PROMPT = `
+You are NOVA, the user's personal intelligent assistant.
+Always reply in Persian when the user writes in Persian.
+Your identity is fixed:
+- You are NOVA, the user's personal intelligent assistant.
+- You help with planning, decisions, reminders, focus, thought capture, and connected actions.
+- Be concise, calm, intelligent, practical, and friendly.
+- Prefer one concrete recommendation over long lists.
+SMART APPROVAL POLICY:
+- Routine, low-risk personal-assistant actions do NOT require extra confirmation.
+- Examples that should proceed without extra confirmation when the host app supports them: add/edit a normal task, mark a task done, add a reminder, save a thought to Parking, organize a list, draft text, analyze, recommend, summarize.
+- Explicit confirmation is required only for sensitive or high-impact actions, including: payments/purchases/transfers; sending messages/emails/posts to other people or publishing externally; permanent deletion of important data; sharing sensitive personal information; account/security/password changes; granting sensitive device permissions or accessing sensitive device data such as contacts, photos, precise location, microphone/camera beyond the user's current interaction.
+- Never claim an external action was executed unless the host application confirms execution.
+- Never invent permissions or capabilities.
+`;
 
 function setStatus(s,d,p){
   $("status").textContent=s;
   $("detail").textContent=d||"";
   if(typeof p==="number") $("bar").style.width=Math.max(0,Math.min(100,p))+"%";
 }
+
+function normalizeFa(s){
+  return (s||"").trim().replace(/ي/g,"ی").replace(/ك/g,"ک");
+}
+
+function isIdentityQuestion(q){
+  q=normalizeFa(q);
+  return [
+    "تو کی هستی","کی هستی","خودتو معرفی","خودت رو معرفی","خودت را معرفی",
+    "تو چی هستی","نووا کیه","نوا کیه","معرفی کن"
+  ].some(x=>q.includes(x));
+}
+
+function classifyRisk(q){
+  q=normalizeFa(q);
+
+  // HIGH RISK / SENSITIVE: explicit confirmation required
+  const highRisk=[
+    // Money
+    "پرداخت","پول واریز","انتقال وجه","کارت به کارت","بخر","خرید کن","پرداخت کن",
+    // External communication / publication
+    "بفرست","ارسال کن","ایمیل کن","پیام بده","واتساپ کن","تلگرام کن","منتشر کن","پست کن",
+    // Permanent deletion
+    "برای همیشه حذف","حذف دائمی","پاک کن برای همیشه","اکانت رو حذف","حساب رو حذف",
+    // Account / security
+    "رمز رو عوض","پسورد رو عوض","گذرواژه رو عوض","تنظیمات امنیتی","ورود به حساب",
+    // Sensitive permissions/data
+    "به مخاطبین دسترسی","دسترسی به مخاطبین","به عکس ها دسترسی","دسترسی به عکس",
+    "لوکیشن دقیق","موقعیت دقیق","دسترسی به میکروفون","دسترسی به دوربین",
+    "اطلاعات بانکی","کد ملی","رمز کارت","شماره کارت"
+  ];
+  if(highRisk.some(v=>q.includes(v))) return "high";
+
+  // LOW RISK / ROUTINE: no extra confirmation
+  const lowRisk=[
+    "یادآوری کن","یادم بنداز","اضافه کن","ثبت کن","بذار تو پارکینگ","بزار تو پارکینگ",
+    "پارکینگ","انجام شد","علامت بزن","ویرایش کن","مرتب کن","برنامه ریزی کن",
+    "بگو","توضیح بده","پیشنهاد بده","تحلیل کن","مقایسه کن","بنویس","پیش نویس",
+    "خلاصه کن","لیست کن","اولویت بندی کن"
+  ];
+  if(lowRisk.some(v=>q.includes(v))) return "low";
+
+  return "normal";
+}
+
+function showApproval(q){
+  pendingAction=q;
+  $("approvalText").textContent=`درخواست: «${q}» — NOVA فقط برای این مورد حساس، بعد از تأیید صریح تو اجازه ادامه دارد.`;
+  $("approvalBox").classList.add("show");
+  $("aiMsg").textContent="این درخواست به یک دسترسی یا اقدام حساس مربوطه. قبل از ادامه باید تأییدت رو بگیرم.";
+}
+
+window.approvePending=function(){
+  if(!pendingAction) return;
+  const action=pendingAction;
+  pendingAction=null;
+  $("approvalBox").classList.remove("show");
+  $("aiMsg").textContent=`تأییدت ثبت شد. درخواست «${action}» مجاز به ادامه است؛ در نسخه فعلی هنوز ابزار اجرای واقعی به NOVA متصل نشده، بنابراین چیزی خارج از برنامه تغییر نکرد.`;
+}
+
+window.cancelPending=function(){
+  pendingAction=null;
+  $("approvalBox").classList.remove("show");
+  $("aiMsg").textContent="لغو شد. هیچ اقدامی انجام نشد.";
+}
+
 window.loadModel=async function(){
   const btn=$("loadBtn");
   btn.disabled=true;
@@ -132,9 +240,9 @@ window.loadModel=async function(){
       }
     });
 
-    setStatus("مدل محلی آماده است","حالا یک پیام آزمایشی بفرست.",100);
+    setStatus("مدل محلی آماده است","شخصیت NOVA و تأیید هوشمند فعال هستند.",100);
     $("chatBox").style.display="block";
-    btn.textContent="مدل آماده است";
+    btn.textContent="NOVA آماده است";
   }catch(e){
     console.error(e);
     setStatus("خطا در راه‌اندازی",""+(e?.message||e),0);
@@ -147,18 +255,35 @@ window.loadModel=async function(){
 window.ask=async function(){
   if(!engine) return;
   const input=$("prompt");
-  const q=input.value.trim();
+  const q=normalizeFa(input.value);
   if(!q) return;
+
+  $("approvalBox").classList.remove("show");
+  pendingAction=null;
+
+  // Core identity is deterministic; it does not depend on the tiny model.
+  if(isIdentityQuestion(q)){
+    $("aiMsg").textContent=NOVA_IDENTITY;
+    return;
+  }
+
+  // Host-level smart approval gate. The language model cannot bypass this.
+  const risk=classifyRisk(q);
+  if(risk==="high"){
+    showApproval(q);
+    return;
+  }
+
   $("sendBtn").disabled=true;
   $("aiMsg").textContent="در حال فکر کردن روی خود دستگاه...";
   try{
     const reply=await engine.chat.completions.create({
       messages:[
-        {role:"system",content:"You are NOVA, a concise personal assistant. If the user writes in Persian, reply in Persian if you can. Keep the answer very short."},
+        {role:"system",content:SYSTEM_PROMPT},
         {role:"user",content:q}
       ],
-      temperature:0.4,
-      max_tokens:80
+      temperature:0.25,
+      max_tokens:130
     });
     $("aiMsg").textContent=reply.choices?.[0]?.message?.content || "پاسخی دریافت نشد.";
   }catch(e){
