@@ -1,49 +1,94 @@
-<!doctype html><html lang="fa" dir="rtl"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#090d1d"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="NOVA">
-<title>NOVA</title><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon-192.png"><link rel="stylesheet" href="styles.css"></head><body>
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#050713">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NOVA">
+<meta name="color-scheme" content="dark">
+<title>NOVA</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
 <main class="app-shell">
-<header class="topbar"><div class="brand"><div class="orb-sm"></div><div class="brand-copy"><b>NOVA</b><small id="dateText"></small></div></div><button class="icon-btn" onclick="showActionOverlay()"><span data-icon="sliders"></span></button></header>
+<header class="topbar">
+  <div class="brand"><div class="orb-sm"></div><div class="brand-copy"><b>NOVA</b><small id="dateText"></small></div></div>
+  <button class="icon-btn" onclick="showDiagnostics()" aria-label="Diagnostics"><span data-icon="sliders"></span></button>
+</header>
 
 <section class="page active" id="home">
-<div class="glass hero"><div class="orb-lg"></div><h1>NOVA</h1><p>دستیار هوشمند شخصی تو؛ برای تصمیم، تمرکز، برنامه‌ریزی، یادآوری و ثبت افکار.</p>
-<div class="daily-summary"><div class="summary-main"><div class="mini-ring"><b id="sumProgress">۰٪</b></div><div><span style="font-size:10px;color:var(--muted)">تمرکز امروز</span><br><b style="font-size:14px">جمع‌وجور</b></div></div><div class="summary-stat"><span>کارهای مانده</span><b id="sumTasks">۰</b></div><div class="summary-stat"><span>انجام‌شده</span><b id="sumDone">۰</b></div><div class="summary-stat"><span>تمرکز فعلی</span><b>۲۵د</b></div></div></div>
-<div class="section-title"><h3>دسترسی سریع</h3></div>
-<div class="quick-grid">
-<button class="quick-card" onclick="openQuickAdd()"><div class="quick-icon" data-icon="plus"></div><span>افزودن وظیفه</span></button>
-<button class="quick-card" onclick="switchPage('memory')"><div class="quick-icon" data-icon="memory"></div><span>حافظه</span></button>
-<button class="quick-card" onclick="switchPage('parking')"><div class="quick-icon" data-icon="parking"></div><span>پارکینگ</span></button>
-<button class="quick-card" onclick="switchPage('chat')"><div class="quick-icon" data-icon="chat"></div><span>گفت‌وگو با NOVA</span></button>
-</div>
-<div class="glass askbar"><textarea id="askInput" rows="1" placeholder="از NOVA بپرس یا دستور بده..."></textarea><button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button></div>
-<div class="section-title"><h3>کارهای امروز</h3></div><div class="glass card" id="homeTasks"></div>
+  <div class="glass hero">
+    <div class="orb-lg"></div><h1>NOVA</h1><p>دستیار شخصی برای برنامه، تمرکز، تقویم و یادآوری.</p>
+    <div class="daily-summary">
+      <div class="summary-main"><div class="mini-ring" id="progressRing"><b id="sumProgress">۰٪</b></div><div><span style="font-size:9px;color:var(--muted)">وضعیت روز</span><br><b style="font-size:13px">در جریان</b></div></div>
+      <div class="summary-stat"><span>کارهای مانده</span><b id="sumTasks">۰</b></div>
+      <div class="summary-stat"><span>انجام‌شده</span><b id="sumDone">۰</b></div>
+      <div class="summary-stat"><span>تمرکز</span><b>۲۵د</b></div>
+    </div>
+  </div>
+  <div class="section-title"><h3>دسترسی سریع</h3></div>
+  <div class="quick-grid">
+    <button class="quick-card" onclick="openQuickTask()"><div class="quick-icon" data-icon="plus"></div><span>کار جدید</span></button>
+    <button class="quick-card" onclick="switchPage('planner')"><div class="quick-icon" data-icon="planner"></div><span>تقویم</span></button>
+    <button class="quick-card" onclick="switchPage('parking')"><div class="quick-icon" data-icon="parking"></div><span>پارکینگ</span></button>
+    <button class="quick-card" onclick="switchPage('chat')"><div class="quick-icon" data-icon="chat"></div><span>گفت‌وگو</span></button>
+  </div>
+  <div class="glass askbar"><textarea id="askInput" rows="1" placeholder="مثلاً: سه‌شنبه ساعت ۱۲ باید برم دفتر..."></textarea><button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button></div>
+  <div class="section-title"><h3>قرار بعدی</h3></div><div class="glass card"><div id="nextEvent" style="font-size:12px;color:var(--muted);line-height:1.8"></div></div>
+  <div class="section-title"><h3>کارهای امروز</h3></div><div class="glass card" id="homeTasks"></div>
 </section>
 
-<section class="page" id="today"><div class="section-title"><h3>امروز</h3><a href="#" onclick="openQuickAdd();return false">+ افزودن</a></div>
-<div class="date-strip"><div class="date-chip"><span>ش</span><b>۱۶</b></div><div class="date-chip"><span>ی</span><b>۱۷</b></div><div class="date-chip active"><span>د</span><b>۱۸</b></div><div class="date-chip"><span>س</span><b>۱۹</b></div><div class="date-chip"><span>چ</span><b>۲۰</b></div><div class="date-chip"><span>پ</span><b>۲۱</b></div></div>
-<div class="glass card" id="todayList"></div></section>
+<section class="page" id="planner">
+  <div class="planner-top"><div class="planner-title"><h2>NOVA Planner</h2><span>تقویم شمسی و برنامه روزانه</span></div><button class="icon-btn" onclick="openEventSheet()"><span data-icon="plus"></span></button></div>
+  <div class="view-switch"><button data-view="day">روز</button><button data-view="week">هفته</button><button class="active" data-view="month">ماه</button></div>
 
-<section class="page" id="done"><div class="section-title"><h3>انجام‌شده</h3><span style="color:var(--muted);font-size:11px">آرشیو امروز</span></div><div class="glass card" id="doneList"></div></section>
+  <div id="monthView">
+    <div class="glass month-card">
+      <div class="month-head"><b id="plannerMonthTitle"></b><div class="month-nav"><button onclick="shiftPlannerMonth(-1)">‹</button><button onclick="shiftPlannerMonth(1)">›</button></div></div>
+      <div class="week-labels"><span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span>ج</span></div>
+      <div class="month-grid" id="monthGrid"></div>
+    </div>
+  </div>
+  <div id="weekView" style="display:none"><div class="glass card"><div class="week-board" id="weekBoard"></div></div></div>
+  <div id="dayView" style="display:none"><div class="glass day-focus"><h3 id="dayFocusTitle"></h3><p>برنامه‌های زمان‌دار این روز</p><div id="dayFocusBody"></div></div></div>
 
-<section class="page" id="parking"><div class="section-title"><h3>پارکینگ</h3></div><div class="searchbox"><span data-icon="search"></span><input placeholder="جست‌وجو در پارکینگ..."></div><div class="glass card" id="parkingList"></div></section>
+  <div class="section-title"><h3 id="selectedDateLabel"></h3><button class="linkbtn" onclick="openEventSheet()">+ برنامه</button></div>
+  <div class="glass timeline" id="selectedTimeline"></div>
+  <button class="planner-add" onclick="openEventSheet()">افزودن برنامه به تقویم</button>
+</section>
 
-<section class="page" id="memory"><div class="section-title"><h3>حافظه</h3><span style="color:var(--muted);font-size:11px">شناخت و ترجیحات</span></div><div class="searchbox"><span data-icon="search"></span><input placeholder="جست‌وجو در حافظه..."></div><div id="memoryList"></div></section>
-
-<section class="page" id="chat"><div class="section-title"><h3>گفت‌وگو با NOVA</h3></div><div class="glass chat-panel"><div class="messages" id="messages"></div></div><div class="glass askbar"><textarea id="chatInput" rows="1" placeholder="پیام خود را بنویس..."></textarea><button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button></div></section>
+<section class="page" id="today"><div class="section-title"><h3>کارها</h3><button class="linkbtn" onclick="openQuickTask()">+ افزودن</button></div><div class="glass card" id="todayList"></div></section>
+<section class="page" id="done"><div class="section-title"><h3>انجام‌شده</h3></div><div class="glass card" id="doneList"></div></section>
+<section class="page" id="parking"><div class="section-title"><h3>پارکینگ</h3></div><div class="glass card" id="parkingList"></div></section>
+<section class="page" id="memory"><div class="section-title"><h3>حافظه NOVA</h3><span style="font-size:10px;color:var(--muted)">قابل توسعه در v0.8</span></div><div id="memoryList"></div></section>
+<section class="page" id="chat"><div class="section-title"><h3>گفت‌وگو با NOVA</h3></div><div class="glass chat-panel"><div class="messages" id="messages"></div></div><div class="glass askbar"><textarea id="chatInput" rows="1" placeholder="فرمان یا سؤال..."></textarea><button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button></div></section>
+<div class="diagnostics" id="storageStatus">در حال آماده‌سازی ذخیره‌سازی…</div>
 </main>
 
-<button class="fab" onclick="openQuickAdd()">＋</button>
-
 <nav class="bottomnav"><div class="navinner">
-<button class="nav-item active" data-page="home" onclick="switchPage('home')"><span data-icon="home"></span><span>خانه</span></button>
-<button class="nav-item" data-page="today" onclick="switchPage('today')"><span data-icon="calendar"></span><span>امروز</span></button>
-<button class="nav-item" data-page="done" onclick="switchPage('done')"><span data-icon="check"></span><span>انجام‌شده</span></button>
-<button class="nav-item" data-page="parking" onclick="switchPage('parking')"><span data-icon="parking"></span><span>پارکینگ</span></button>
-<button class="nav-item" data-page="memory" onclick="switchPage('memory')"><span data-icon="memory"></span><span>حافظه</span></button>
+  <button class="nav-item active" data-page="home" onclick="switchPage('home')"><span data-icon="home"></span><span>خانه</span></button>
+  <button class="nav-item" data-page="planner" onclick="switchPage('planner')"><span data-icon="planner"></span><span>تقویم</span></button>
+  <button class="nav-item" data-page="today" onclick="switchPage('today')"><span data-icon="check"></span><span>کارها</span></button>
+  <button class="nav-item" data-page="parking" onclick="switchPage('parking')"><span data-icon="parking"></span><span>پارکینگ</span></button>
+  <button class="nav-item" data-page="memory" onclick="switchPage('memory')"><span data-icon="memory"></span><span>حافظه</span></button>
 </div></nav>
 
-<div class="quickadd" id="quickadd" onclick="closeQuickAdd(event)"><div class="quickadd-sheet glass" onclick="event.stopPropagation()"><div class="sheet-handle"></div><h3>چه کاری رو می‌خوای انجام بدی؟</h3><input id="quickTitle" placeholder="مثلاً: مطالعه کتاب"><div class="sheet-chips"><button onclick="setWhen(this,'امروز')">امروز</button><button onclick="setWhen(this,'فردا')">فردا</button><button onclick="setWhen(this,'این هفته')">این هفته</button><span id="quickWhen" data-value="امروز"></span></div><button class="primary" style="width:100%" onclick="addTaskFromSheet()">افزودن وظیفه</button></div></div>
+<div class="sheet-overlay" id="eventSheet" onclick="closeEventSheet(event)"><div class="sheet glass" onclick="event.stopPropagation()"><div class="sheet-handle"></div><h3>برنامه جدید</h3><div class="form-grid">
+  <div class="field full"><label>عنوان</label><input id="eventTitle" placeholder="مثلاً: رفتن به دفتر"></div>
+  <div class="field"><label>تاریخ شمسی انتخاب‌شده</label><input id="eventDateLabel" readonly></div><div class="field"><label>ساعت</label><input id="eventTime" type="time" value="09:00"></div>
+  <div class="field"><label>مدت</label><select id="eventDuration"><option value="30">۳۰ دقیقه</option><option value="60" selected>۱ ساعت</option><option value="90">۹۰ دقیقه</option><option value="120">۲ ساعت</option></select></div>
+  <div class="field"><label>هشدار</label><select id="eventAlert"><option value="15">۱۵ دقیقه قبل</option><option value="30">۳۰ دقیقه قبل</option><option value="60" selected>۱ ساعت قبل</option><option value="120">۲ ساعت قبل</option></select></div>
+  <div class="field full"><label>مکان</label><input id="eventLocation" placeholder="اختیاری"></div>
+  <div class="field full"><label>یادداشت</label><input id="eventNotes" placeholder="اختیاری"></div>
+</div><button class="primary" style="width:100%" onclick="saveEvent()">ثبت در NOVA Planner</button></div></div>
 
-<div class="action-overlay" id="actionOverlay" onclick="closeActionOverlay()"><div class="action-inner" onclick="event.stopPropagation()"><div class="orb-action"></div><h2>NOVA</h2><p id="actionHint">در حال آماده‌سازی…</p><div class="action-wave"><i></i><i></i><i></i><i></i><i></i></div><button class="primary" onclick="closeActionOverlay()">ورود به NOVA</button></div></div>
+<div class="sheet-overlay" id="taskSheet" onclick="closeTaskSheet(event)"><div class="sheet glass" onclick="event.stopPropagation()"><div class="sheet-handle"></div><h3>کار جدید</h3><div class="field"><label>عنوان کار</label><input id="taskTitle" placeholder="مثلاً: خرید"></div><div class="field"><label>زمان/توضیح کوتاه</label><input id="taskWhen" value="امروز"></div><button class="primary" style="width:100%" onclick="saveTask()">اضافه کردن</button></div></div>
+
 <div class="toast" id="toast"></div>
-<script src="app.js"></script></body></html>
+<script type="module" src="app.js"></script>
+</body></html>
