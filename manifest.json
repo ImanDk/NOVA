@@ -1,9 +1,10 @@
 {
-  "name": "NOVA — دستیار شخصی",
+  "name": "NOVA — دستیار هوشمند شخصی",
   "short_name": "NOVA",
   "lang": "fa",
   "dir": "rtl",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#060913",
   "theme_color": "#0a0f1b",
