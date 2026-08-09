@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070b14">
+<title>NOVA — AI Check</title>
+<style>
+@font-face{font-family:Dana;src:url("./fonts/dana-light.woff2") format("woff2");font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:Dana;src:url("./fonts/dana-regular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:Dana;src:url("./fonts/dana-medium.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}
+:root{
+ --bg:#050812;--panel:rgba(255,255,255,.065);--line:rgba(255,255,255,.11);
+ --txt:#f6f7ff;--muted:#9aa3bc;--ok:#56e4b4;--bad:#ff708c;--wait:#ffd166;
+}
+*{box-sizing:border-box}
+body{
+ margin:0;min-height:100vh;color:var(--txt);font-family:Dana,-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif;
+ font-weight:300;background:
+ radial-gradient(38rem 28rem at 85% -10%,rgba(142,84,255,.22),transparent 55%),
+ radial-gradient(30rem 24rem at -10% 40%,rgba(57,210,255,.11),transparent 55%),
+ linear-gradient(180deg,#09111f,#050812 72%);
+}
+.wrap{max-width:560px;margin:auto;padding:calc(env(safe-area-inset-top) + 24px) 16px calc(env(safe-area-inset-bottom) + 28px)}
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:12px}
+.orb{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:
+ radial-gradient(circle at 30% 25%,rgba(255,255,255,.55),transparent 24%),
+ linear-gradient(145deg,rgba(170,104,255,.55),rgba(80,205,255,.16));
+ box-shadow:0 12px 30px rgba(115,75,255,.22),inset 0 1px 0 rgba(255,255,255,.18)}
+.logo{font-weight:500;letter-spacing:5px;font-size:18px}
+.sub{font-size:11px;color:var(--muted);margin-top:2px}
+.glass{
+ background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.045));
+ border:1px solid var(--line);border-radius:26px;
+ backdrop-filter:blur(20px) saturate(120%);-webkit-backdrop-filter:blur(20px) saturate(120%);
+ box-shadow:0 18px 45px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.1)
+}
+.hero{padding:20px;margin-bottom:14px}
+h1{font-size:24px;font-weight:500;margin:0 0 7px}
+p{font-size:12px;line-height:1.9;color:var(--muted);margin:0}
+.status{display:flex;align-items:center;gap:10px;margin-top:16px;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--wait);box-shadow:0 0 18px currentColor}
+.status b{font-size:13px;font-weight:400}
+.list{padding:8px 14px;margin-bottom:14px}
+.row{display:flex;align-items:center;gap:10px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.row:last-child{border-bottom:0}
+.ico{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.meta{flex:1}
+.name{font-size:13px;font-weight:400}
+.desc{font-size:10px;color:var(--muted);margin-top:2px}
+.val{font-size:11px;padding:6px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04)}
+.val.ok{color:var(--ok)} .val.bad{color:var(--bad)} .val.wait{color:var(--wait)}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{
+ border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:13px 12px;
+ font:inherit;font-weight:400;color:white;background:rgba(255,255,255,.055)
+}
+.primary{background:linear-gradient(135deg,rgba(170,93,255,.93),rgba(71,116,255,.93));box-shadow:0 12px 30px rgba(109,80,255,.25)}
+.note{margin-top:14px;padding:14px 16px;font-size:11px;line-height:1.9;color:var(--muted)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:#d5ddff}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <div class="orb"></div>
+      <div><div class="logo">NOVA</div><div class="sub">Local AI Readiness</div></div>
+    </div>
+  </div>
+
+  <div class="glass hero">
+    <h1>تست آمادگی هوش محلی</h1>
+    <p>این صفحه فقط بررسی می‌کند آیا آیفون و Web App فعلی می‌توانند زیرساخت لازم برای اجرای مدل AI روی خود دستگاه را فراهم کنند. هیچ اطلاعات شخصی ارسال نمی‌شود.</p>
+    <div class="status">
+      <span class="dot" id="mainDot"></span>
+      <b id="mainStatus">در حال بررسی...</b>
+    </div>
+  </div>
+
+  <div class="glass list">
+    <div class="row"><div class="ico">GPU</div><div class="meta"><div class="name">WebGPU</div><div class="desc">برای اجرای سریع مدل روی GPU آیفون</div></div><div class="val wait" id="gpu">بررسی...</div></div>
+    <div class="row"><div class="ico">DB</div><div class="meta"><div class="name">IndexedDB</div><div class="desc">برای حافظه و کش مدل</div></div><div class="val wait" id="idb">بررسی...</div></div>
+    <div class="row"><div class="ico">SW</div><div class="meta"><div class="name">Service Worker</div><div class="desc">برای PWA و فایل‌های آفلاین</div></div><div class="val wait" id="sw">بررسی...</div></div>
+    <div class="row"><div class="ico">APP</div><div class="meta"><div class="name">Standalone</div><div class="desc">آیا از Home Screen مثل اپ باز شده؟</div></div><div class="val wait" id="standalone">بررسی...</div></div>
+    <div class="row"><div class="ico">ST</div><div class="meta"><div class="name">فضای قابل مشاهده</div><div class="desc">تخمین فضای ذخیره برای مدل و حافظه</div></div><div class="val wait" id="storage">بررسی...</div></div>
+    <div class="row"><div class="ico">UA</div><div class="meta"><div class="name">مرورگر/سیستم</div><div class="desc">اطلاعات فنی جهت عیب‌یابی</div></div><div class="val" id="ua">...</div></div>
+  </div>
+
+  <div class="btns">
+    <button class="primary" onclick="run()">تست دوباره</button>
+    <button onclick="copyResult()">کپی نتیجه</button>
+  </div>
+
+  <div class="glass note">
+    مرحله بعد فقط وقتی انجام می‌شود که WebGPU و IndexedDB سبز باشند. بعد یک مدل کوچک چندزبانه روی خود گوشی دانلود و کش می‌کنیم؛ مدل روی دستگاه اجرا می‌شود و برای تولید پاسخ به سرور AI ارسال نمی‌شود.
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+let report={};
+function set(id,text,state){
+  const el=$(id); el.textContent=text; el.classList.remove('ok','bad','wait'); if(state)el.classList.add(state);
+}
+function idbCheck(){
+  return new Promise(resolve=>{
+    try{
+      const req=indexedDB.open('nova-ai-test',1);
+      req.onupgradeneeded=()=>req.result.createObjectStore('t');
+      req.onsuccess=()=>{req.result.close();resolve(true)};
+      req.onerror=()=>resolve(false);
+    }catch(e){resolve(false)}
+  })
+}
+async function run(){
+  $('mainStatus').textContent='در حال بررسی...'; $('mainDot').style.background='var(--wait)';
+  report={time:new Date().toISOString()};
+  // WebGPU
+  try{
+    if(!navigator.gpu){ throw new Error('navigator.gpu unavailable'); }
+    const adapter=await navigator.gpu.requestAdapter();
+    if(!adapter) throw new Error('no adapter');
+    report.webgpu=true; set('gpu','آماده','ok');
+  }catch(e){report.webgpu=false;report.webgpuError=String(e);set('gpu','در دسترس نیست','bad')}
+  // IndexedDB
+  const idb=await idbCheck(); report.indexeddb=idb; set('idb',idb?'آماده':'خطا',idb?'ok':'bad');
+  // Service worker
+  const sw='serviceWorker' in navigator; report.serviceWorker=sw; set('sw',sw?'آماده':'ندارد',sw?'ok':'bad');
+  // Standalone
+  const standalone=(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+  report.standalone=standalone; set('standalone',standalone?'بله':'خیر',standalone?'ok':'wait');
+  // Storage
+  try{
+    if(navigator.storage && navigator.storage.estimate){
+      const e=await navigator.storage.estimate();
+      const mb=n=>Math.round((n||0)/1024/1024);
+      report.storage={quotaMB:mb(e.quota),usageMB:mb(e.usage)};
+      set('storage',`${mb(e.usage)} / ${mb(e.quota)} MB`,'ok');
+    }else{report.storage=null;set('storage','نامشخص','wait')}
+  }catch(e){report.storageError=String(e);set('storage','نامشخص','wait')}
+  report.userAgent=navigator.userAgent;
+  set('ua',/iPhone/i.test(navigator.userAgent)?'iPhone':'Browser','');
+  const ready=report.webgpu && report.indexeddb;
+  $('mainStatus').textContent=ready?'آیفون برای تست مدل محلی آماده است':'یکی از پیش‌نیازها آماده نیست';
+  $('mainDot').style.background=ready?'var(--ok)':'var(--bad)';
+}
+async function copyResult(){
+  const txt='NOVA AI Check\n'+JSON.stringify(report,null,2);
+  try{await navigator.clipboard.writeText(txt);alert('نتیجه کپی شد. داخل چت برای من Paste کن.')}
+  catch(e){prompt('این متن را کپی کن:',txt)}
+}
+run();
+</script>
+</body>
+</html>
