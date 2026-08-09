@@ -164,7 +164,7 @@ button,input,textarea{font-family:inherit}
     <div class="glass hero section">
       <div class="hero-head">
         <div class="hello"><h1 id="greeting">سلام ✨</h1><p>امروز قرار نیست همه‌چیز رو انجام بدی؛ فقط مهم‌ترین حرکت رو پیدا می‌کنیم.</p></div>
-        <div class="badges"><div class="chip ok" id="brainChip">مغز محلی</div><div class="chip">نسخه 0.4</div></div>
+        <div class="badges"><div class="chip ok" id="brainChip">مغز محلی</div><div class="chip ok">iPhone Safe</div><div class="chip">نسخه 0.4.1</div></div>
       </div>
       <div class="progress-wrap">
         <div class="ring" id="progressRing"><b id="progressPct">0%</b></div>
@@ -237,9 +237,9 @@ button,input,textarea{font-family:inherit}
       </div>
 
       <div class="ai-status">
-        <div class="ai-status-row"><div><b id="aiStatus">مغز محلی هنوز فعال نشده</b><br><span id="aiModel">Qwen3.5-2B • Local</span></div><button class="btn" id="loadBtn" style="flex:0 0 auto;padding:9px 11px" onclick="loadAI()">فعال‌سازی</button></div>
+        <div class="ai-status-row"><div><b id="aiStatus">مغز محلی هنوز فعال نشده</b><br><span id="aiModel">Qwen3.5-0.8B • iPhone Safe</span></div><button class="btn" id="loadBtn" style="flex:0 0 auto;padding:9px 11px" onclick="loadAI()">فعال‌سازی</button></div>
         <div class="ai-progress"><div id="aiProgress"></div></div>
-        <div class="helper" id="aiDetail" style="margin-top:8px">بار اول مدل دانلود و روی همین دستگاه کش می‌شود. برای تولید پاسخ API پولی استفاده نمی‌شود.</div>
+        <div class="helper" id="aiDetail" style="margin-top:8px">حالت iPhone Safe: مدل سبک‌تر، حافظه اجرایی کمتر و Cache پایدارتر. بار اول دانلود می‌شود؛ تولید پاسخ API پولی ندارد.</div>
       </div>
 
       <div class="chat">
@@ -312,7 +312,7 @@ function migrate(){
 }
 let state=migrate();
 let engine=null, webllm=null, pendingAction=null, aiLoading=false;
-const MODEL_ID="Qwen3.5-2B-q4f16_1-MLC";
+const MODEL_ID="Qwen3.5-0.8B-q4f16_1-MLC";
 const days=['ش','ی','د','س','چ','پ','ج'];
 const $=id=>document.getElementById(id);
 function save(){localStorage.setItem(storeKey,JSON.stringify(state));render()}
@@ -500,12 +500,31 @@ window.loadAI=async function(){
   if(engine||aiLoading)return;aiLoading=true;$('loadBtn').disabled=true;$('aiStatus').textContent='در حال آماده‌سازی...';
   try{
     webllm=await import('https://esm.run/@mlc-ai/web-llm');
-    const appConfig={...webllm.prebuiltAppConfig,cacheBackend:'indexeddb'};
+
+    // iPhone-safe configuration:
+    // - use the smaller Qwen3.5-0.8B model
+    // - use WebLLM's most-tested Cache API backend
+    // - reduce context window to lower KV-cache / runtime memory pressure
+    const sourceRecord=webllm.prebuiltAppConfig.model_list.find(m=>m.model_id===MODEL_ID);
+    if(!sourceRecord) throw new Error('مدل Qwen3.5-0.8B در نسخه فعلی WebLLM پیدا نشد.');
+    const safeRecord={
+      ...sourceRecord,
+      overrides:{
+        ...(sourceRecord.overrides||{}),
+        context_window_size:2048,
+        max_history_size:1
+      }
+    };
+    const appConfig={
+      model_list:[safeRecord],
+      cacheBackend:'cache'
+    };
+
     engine=await webllm.CreateMLCEngine(MODEL_ID,{appConfig,initProgressCallback:r=>{
       const p=typeof r.progress==='number'?Math.round(r.progress*100):0;$('aiProgress').style.width=p+'%';
       $('aiDetail').textContent=r.text||'در حال دانلود/بارگذاری مدل روی دستگاه...';
     }});
-    $('aiStatus').textContent='مغز محلی آماده است';$('aiProgress').style.width='100%';$('aiDetail').textContent='مدل روی خود دستگاه اجرا می‌شود و حافظه شخصی از داده‌های محلی NOVA وارد پاسخ می‌شود.';
+    $('aiStatus').textContent='مغز محلی آماده است';$('aiProgress').style.width='100%';$('aiDetail').textContent='مدل در حالت iPhone Safe روی خود دستگاه اجرا می‌شود؛ حافظه شخصی NOVA همچنان وارد پاسخ می‌شود.';
     $('loadBtn').textContent='فعال';$('brainChip').textContent='مغز محلی: فعال';
   }catch(e){
     console.error(e);$('aiStatus').textContent='خطا در فعال‌سازی';$('aiDetail').textContent=String(e?.message||e);$('loadBtn').disabled=false;$('loadBtn').textContent='تلاش دوباره';
@@ -517,7 +536,11 @@ async function aiAnswer(q){
   const complex=/تصمیم|مقایسه|بین .* و|ریسک|تحلیل|برنامه|بهترین|چرا|راهکار/.test(q);
   const messages=[{role:'system',content:corePrompt(q)},{role:'user',content:q}];
   const resp=await engine.chat.completions.create({
-    messages,temperature:complex?.45:.3,top_p:.9,max_tokens:complex?260:170,enable_thinking:complex
+    messages,
+    temperature:complex?.42:.28,
+    top_p:.9,
+    max_tokens:complex?220:150,
+    enable_thinking:false
   });
   let text=resp.choices?.[0]?.message?.content||'پاسخی تولید نشد.';
   text=text.replace(/<think>[\s\S]*?<\/think>/gi,'').replace(/<\/?think>/gi,'').trim();
