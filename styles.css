@@ -423,3 +423,39 @@ p,label,
 @keyframes voiceThink{to{filter:hue-rotate(28deg)}}
 @keyframes voiceSpeak{50%{transform:scale(1.035);filter:brightness(1.1)}}
 @keyframes wave{0%,100%{height:5px;opacity:.35}50%{height:20px;opacity:.95}}
+
+
+/* ==========================================================
+   NOVA v0.7.1 — Tasks: Open / Done Tabs
+   ========================================================== */
+.task-tabs{
+  display:grid;grid-template-columns:1fr 1fr;gap:5px;
+  padding:5px;margin:0 0 11px;border-radius:19px;
+  background:rgba(255,255,255,.028);border:1px solid var(--stroke2);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+}
+.task-tab{
+  border:0;min-height:43px;border-radius:14px;background:transparent;color:var(--muted);
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  font-size:11px;transition:.22s var(--spring);
+}
+.task-tab b{
+  min-width:22px;height:22px;padding:0 6px;border-radius:999px;
+  display:grid;place-items:center;font-size:9px;font-weight:600;
+  background:rgba(255,255,255,.05);border:1px solid var(--stroke2);color:#abb3ca;
+}
+.task-tab.active{
+  color:#f1eaff;
+  background:linear-gradient(180deg,rgba(169,103,255,.16),rgba(91,111,255,.07));
+  border:1px solid rgba(169,103,255,.12);
+  box-shadow:0 9px 24px rgba(91,75,255,.10),inset 0 1px 0 rgba(255,255,255,.07);
+  transform:translateY(-2px);
+}
+.task-tab.active b{
+  color:#e8dcff;background:rgba(169,103,255,.13);border-color:rgba(169,103,255,.18);
+}
+.task-tab:active{transform:scale(.96)}
+.task-pane{display:none}
+.task-pane.active{display:block}
+.task-pane-pop{animation:taskTabIn .26s var(--ease)}
+@keyframes taskTabIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}

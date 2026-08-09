@@ -69,8 +69,19 @@
   <button class="planner-add" onclick="openEventSheet()">افزودن برنامه به تقویم</button>
 </section>
 
-<section class="page" id="today"><div class="section-title"><h3>کارها</h3><button class="linkbtn" onclick="openQuickTask()">+ افزودن</button></div><div class="glass card" id="todayList"></div></section>
-<section class="page" id="done"><div class="section-title"><h3>انجام‌شده</h3></div><div class="glass card" id="doneList"></div></section>
+<section class="page" id="today">
+  <div class="section-title"><h3>کارها</h3><button class="linkbtn" onclick="openQuickTask()">+ افزودن</button></div>
+  <div class="task-tabs" role="tablist" aria-label="وضعیت کارها">
+    <button class="task-tab active" id="openTasksTab" onclick="switchTaskTab('open')">
+      <span>کارهای باز</span><b id="openTasksCount">۰</b>
+    </button>
+    <button class="task-tab" id="doneTasksTab" onclick="switchTaskTab('done')">
+      <span>انجام‌شده</span><b id="doneTasksCount">۰</b>
+    </button>
+  </div>
+  <div class="task-pane active" id="openTasksPane"><div class="glass card" id="todayList"></div></div>
+  <div class="task-pane" id="doneTasksPane"><div class="glass card" id="doneList"></div></div>
+</section>
 <section class="page" id="parking"><div class="section-title"><h3>پارکینگ</h3></div><div class="glass card" id="parkingList"></div></section>
 <section class="page" id="memory"><div class="section-title"><h3>حافظه NOVA</h3><span style="font-size:10px;color:var(--muted)">قابل توسعه در v0.8</span></div><div id="memoryList"></div></section>
 

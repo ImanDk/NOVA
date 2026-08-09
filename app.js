@@ -28,6 +28,7 @@ let currentProjectTab="overview";
 let planner={view:"month",anchor:new Date(),selected:new Date()};
 let voiceSessionOpen=false;
 let pendingBridgeIntent=null;
+let currentTaskTab="open";
 
 function icon(n){return ICONS[n]||ICONS.home}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
@@ -110,8 +111,13 @@ function doneTaskRow(t){
 
 function empty(s){return `<div class="timeline-empty">${esc(s)}</div>`}
 function renderTasks(){
-  $("todayList").innerHTML=state.tasks.map(taskRow).join("")||empty("کاری ثبت نشده.");
-  $("doneList").innerHTML=state.tasks.filter(t=>t.done).map(doneTaskRow).join("")||empty("هنوز کاری انجام نشده.");
+  const openTasks=state.tasks.filter(t=>!t.done);
+  const doneTasks=state.tasks.filter(t=>t.done);
+  $("todayList").innerHTML=openTasks.map(taskRow).join("")||empty("کار بازی نداری.");
+  $("doneList").innerHTML=doneTasks.map(doneTaskRow).join("")||empty("هنوز کاری انجام نشده.");
+  if($("openTasksCount"))$("openTasksCount").textContent=faNum(openTasks.length);
+  if($("doneTasksCount"))$("doneTasksCount").textContent=faNum(doneTasks.length);
+  switchTaskTab(currentTaskTab,false);
 }
 function renderMemoryParking(){
   $("parkingList").innerHTML=state.parking.map(p=>`<div class="task-row"><div class="task-copy"><b>${esc(p.text)}</b><small>پارک شده</small></div><button class="secondary" onclick="parkingToTask(${p.id})">تبدیل به کار</button></div>`).join("")||empty("پارکینگ خالی است.");
@@ -159,6 +165,20 @@ function eventRow(e){
 window.selectPlannerDate=iso=>{planner.selected=new Date(iso);planner.anchor=new Date(iso);renderPlanner()}
 window.shiftPlannerMonth=dir=>{const d=dir>0?addDays(monthCells(planner.anchor).end,1):addDays(monthCells(planner.anchor).start,-1);planner.anchor=d;planner.selected=d;renderPlanner()}
 window.switchPage=id=>{document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$(id).classList.add("active");document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.page===id||(id==="projectDetail"&&n.dataset.page==="projects")));window.scrollTo({top:0,behavior:"smooth"});if(id==="planner")renderPlanner();if(id==="projects")renderProjects();if(id==="projectDetail"&&currentProjectId)renderProjectDetail()}
+window.switchTaskTab=(tab,animate=true)=>{
+  currentTaskTab=tab==="done"?"done":"open";
+  const openTab=$("openTasksTab"),doneTab=$("doneTasksTab"),openPane=$("openTasksPane"),donePane=$("doneTasksPane");
+  if(!openTab||!doneTab||!openPane||!donePane)return;
+  openTab.classList.toggle("active",currentTaskTab==="open");
+  doneTab.classList.toggle("active",currentTaskTab==="done");
+  openPane.classList.toggle("active",currentTaskTab==="open");
+  donePane.classList.toggle("active",currentTaskTab==="done");
+  if(animate){
+    const pane=currentTaskTab==="open"?openPane:donePane;
+    pane.classList.remove("task-pane-pop");void pane.offsetWidth;pane.classList.add("task-pane-pop");
+  }
+};
+
 window.toggleTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;t.done=!t.done;await put("tasks",t);await loadState();renderAll();toast(t.done?"انجام‌شده ثبت شد":"کار دوباره باز شد")}
 window.parkingToTask=async id=>{const p=state.parking.find(x=>x.id===id);if(!p)return;await put("tasks",{id:now(),title:p.text,time:"امروز",done:false,createdAt:now()});await remove("parking",id);await loadState();renderAll();toast("به کارهای امروز منتقل شد")}
 window.openEventSheet=()=>{$("eventSheet").classList.add("show");$("eventTitle").focus();$("eventDateLabel").value=pFull(planner.selected)}
