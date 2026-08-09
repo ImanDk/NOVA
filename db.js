@@ -1,5 +1,5 @@
 
-const DB_NAME="nova_core_v06", DB_VERSION=1;
+const DB_NAME="nova_core_v06", DB_VERSION=2;
 let _db=null;
 function reqP(req){return new Promise((resolve,reject)=>{req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error)})}
 export async function openDB(){
@@ -15,6 +15,8 @@ export async function openDB(){
       if(!db.objectStoreNames.contains("chat")) db.createObjectStore("chat",{keyPath:"id"});
       if(!db.objectStoreNames.contains("settings")) db.createObjectStore("settings",{keyPath:"key"});
       if(!db.objectStoreNames.contains("logs")) db.createObjectStore("logs",{keyPath:"id"});
+      if(!db.objectStoreNames.contains("projects")) db.createObjectStore("projects",{keyPath:"id"});
+      if(!db.objectStoreNames.contains("projectTasks")) db.createObjectStore("projectTasks",{keyPath:"id"});
     };
     r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);
   });

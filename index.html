@@ -37,6 +37,7 @@
     <button class="quick-card" onclick="switchPage('planner')"><div class="quick-icon" data-icon="planner"></div><span>تقویم</span></button>
     <button class="quick-card" onclick="switchPage('parking')"><div class="quick-icon" data-icon="parking"></div><span>پارکینگ</span></button>
     <button class="quick-card" onclick="switchPage('chat')"><div class="quick-icon" data-icon="chat"></div><span>گفت‌وگو</span></button>
+    <button class="quick-card" onclick="switchPage('projects')"><div class="quick-icon" data-icon="projects"></div><span>پروژه‌ها</span></button>
   </div>
   <div class="glass askbar"><textarea id="askInput" rows="1" placeholder="مثلاً: سه‌شنبه ساعت ۱۲ باید برم دفتر..."></textarea><button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button></div>
   <div class="section-title"><h3>قرار بعدی</h3></div><div class="glass card"><div id="nextEvent" style="font-size:12px;color:var(--muted);line-height:1.8"></div></div>
@@ -66,6 +67,36 @@
 <section class="page" id="done"><div class="section-title"><h3>انجام‌شده</h3></div><div class="glass card" id="doneList"></div></section>
 <section class="page" id="parking"><div class="section-title"><h3>پارکینگ</h3></div><div class="glass card" id="parkingList"></div></section>
 <section class="page" id="memory"><div class="section-title"><h3>حافظه NOVA</h3><span style="font-size:10px;color:var(--muted)">قابل توسعه در v0.8</span></div><div id="memoryList"></div></section>
+
+<section class="page" id="projects">
+  <div class="projects-head">
+    <div><h2>پروژه‌ها</h2><p>Project Planner مستقل و متصل به برنامه روزانه</p></div>
+    <button class="icon-btn" onclick="openProjectSheet()"><span data-icon="plus"></span></button>
+  </div>
+  <div id="projectsList" class="project-list"></div>
+</section>
+
+<section class="page" id="projectDetail">
+  <button class="linkbtn" onclick="switchPage('projects')" style="margin-bottom:8px">‹ بازگشت به پروژه‌ها</button>
+  <div class="glass project-detail-head">
+    <div class="topline">
+      <div><h2 id="projectDetailTitle"></h2><p id="projectDetailDesc"></p></div>
+      <div class="project-progress-big" id="projectProgressRing"><b id="projectProgressText">۰٪</b></div>
+    </div>
+    <div class="project-stats" id="projectMetaChips" style="margin-top:10px"></div>
+  </div>
+  <div class="project-tabs">
+    <button class="project-tab active" data-project-tab="overview" onclick="switchProjectTab('overview')">نمای کلی</button>
+    <button class="project-tab" data-project-tab="tasks" onclick="switchProjectTab('tasks')">کارها</button>
+    <button class="project-tab" data-project-tab="planner" onclick="switchProjectTab('planner')">برنامه‌ریزی</button>
+    <button class="project-tab" data-project-tab="progress" onclick="switchProjectTab('progress')">پیشرفت</button>
+  </div>
+  <div class="project-pane active" id="projectPaneOverview"></div>
+  <div class="project-pane" id="projectPaneTasks"></div>
+  <div class="project-pane" id="projectPanePlanner"></div>
+  <div class="project-pane" id="projectPaneProgress"></div>
+</section>
+
 <section class="page" id="chat"><div class="section-title"><h3>گفت‌وگو با NOVA</h3></div><div class="glass chat-panel"><div class="messages" id="messages"></div></div><div class="glass askbar"><textarea id="chatInput" rows="1" placeholder="فرمان یا سؤال..."></textarea><button class="ask-orb" onclick="askNOVA()"><span data-icon="chat"></span></button></div></section>
 <div class="diagnostics" id="storageStatus">در حال آماده‌سازی ذخیره‌سازی…</div>
 </main>
@@ -73,8 +104,8 @@
 <nav class="bottomnav"><div class="navinner">
   <button class="nav-item active" data-page="home" onclick="switchPage('home')"><span data-icon="home"></span><span>خانه</span></button>
   <button class="nav-item" data-page="planner" onclick="switchPage('planner')"><span data-icon="planner"></span><span>تقویم</span></button>
+  <button class="nav-item" data-page="projects" onclick="switchPage('projects')"><span data-icon="projects"></span><span>پروژه‌ها</span></button>
   <button class="nav-item" data-page="today" onclick="switchPage('today')"><span data-icon="check"></span><span>کارها</span></button>
-  <button class="nav-item" data-page="parking" onclick="switchPage('parking')"><span data-icon="parking"></span><span>پارکینگ</span></button>
   <button class="nav-item" data-page="memory" onclick="switchPage('memory')"><span data-icon="memory"></span><span>حافظه</span></button>
 </div></nav>
 
@@ -89,6 +120,35 @@
 
 <div class="sheet-overlay" id="taskSheet" onclick="closeTaskSheet(event)"><div class="sheet glass" onclick="event.stopPropagation()"><div class="sheet-handle"></div><h3>کار جدید</h3><div class="field"><label>عنوان کار</label><input id="taskTitle" placeholder="مثلاً: خرید"></div><div class="field"><label>زمان/توضیح کوتاه</label><input id="taskWhen" value="امروز"></div><button class="primary" style="width:100%" onclick="saveTask()">اضافه کردن</button></div></div>
 
-<div class="toast" id="toast"></div>
+
+<div class="sheet-overlay" id="projectSheet" onclick="closeProjectSheet(event)">
+  <div class="sheet glass" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div><h3>پروژه جدید</h3>
+    <div class="form-grid">
+      <div class="field full"><label>نام پروژه</label><input id="projectTitle" placeholder="مثلاً: طراحی سایت NOVA"></div>
+      <div class="field full"><label>هدف / توضیح</label><input id="projectDescription" placeholder="هدف اصلی پروژه"></div>
+      <div class="field"><label>تاریخ شروع</label><input id="projectStart" type="date"></div>
+      <div class="field"><label>تاریخ پایان</label><input id="projectEnd" type="date"></div>
+      <div class="field full"><label>وضعیت</label><select id="projectStatus"><option value="active">فعال</option><option value="paused">متوقف</option><option value="done">تکمیل‌شده</option></select></div>
+    </div>
+    <button class="primary" style="width:100%" onclick="saveProject()">ساخت پروژه</button>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="projectTaskSheet" onclick="closeProjectTaskSheet(event)">
+  <div class="sheet glass" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div><h3>کار پروژه</h3>
+    <div class="form-grid">
+      <div class="field full"><label>عنوان کار</label><input id="projectTaskTitle" placeholder="مثلاً: طراحی صفحه اصلی"></div>
+      <div class="field"><label>تاریخ</label><input id="projectTaskDate" type="date"></div>
+      <div class="field"><label>ساعت</label><input id="projectTaskTime" type="time" value="09:00"></div>
+      <div class="field"><label>اولویت</label><select id="projectTaskPriority"><option value="normal">عادی</option><option value="high">مهم</option><option value="low">کم</option></select></div>
+      <div class="field"><label>افزودن به تقویم</label><select id="projectTaskCalendar"><option value="yes">بله</option><option value="no">خیر</option></select></div>
+    </div>
+    <button class="primary" style="width:100%" onclick="saveProjectTask()">افزودن کار</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span id="toastText"></span><button id="toastAction" class="toast-action" style="display:none"></button></div>
 <script type="module" src="app.js"></script>
 </body></html>

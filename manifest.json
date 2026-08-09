@@ -1,5 +1,5 @@
 {
-  "name": "NOVA — دستیار هوشمند شخصی",
+  "name": "NOVA — Personal Assistant",
   "short_name": "NOVA",
   "lang": "fa",
   "dir": "rtl",
@@ -19,5 +19,6 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "description": "Offline-first Persian personal assistant with planner and project management."
 }

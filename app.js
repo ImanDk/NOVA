@@ -11,17 +11,29 @@ const ICONS={
  parking:`<svg viewBox="0 0 24 24"><path d="M5 19c4-1 6-4 6-8 0-3 2-5 5-5 2 0 3 1 3 3 0 3-3 5-7 5"/><circle cx="6" cy="19" r="2"/></svg>`,
  memory:`<svg viewBox="0 0 24 24"><path d="M8 4h8a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg>`,
  chat:`<svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4Z"/></svg>`,
+ projects:`<svg viewBox="0 0 24 24"><path d="M4 7h6l2 2h8v10H4Z"/><path d="M4 7V5h6l2 2"/></svg>`,
+ trash:`<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></svg>`,
  plus:`<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>`,
  sliders:`<svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h3M11 12h9M4 18h8M16 18h4"/><circle cx="16" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="14" cy="18" r="2"/></svg>`
 };
-let state={tasks:[],events:[],parking:[],memory:[],chat:[]};
+let state={tasks:[],events:[],parking:[],memory:[],chat:[],projects:[],projectTasks:[]};
+let currentProjectId=null;
+let lastDeletedTask=null;
+let currentProjectTab="overview";
 let planner={view:"month",anchor:new Date(),selected:new Date()};
 
 function icon(n){return ICONS[n]||ICONS.home}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function faNum(n){return new Intl.NumberFormat("fa-IR",{useGrouping:false}).format(n)}
 function faTime(d){return new Intl.DateTimeFormat("fa-IR",{hour:"2-digit",minute:"2-digit",hour12:false}).format(d)}
-function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove("show"),2400)}
+function toast(msg,actionLabel=null,actionFn=null){
+  const t=$("toast"), text=$("toastText")||t, action=$("toastAction");
+  text.textContent=msg;
+  if(action && actionLabel && actionFn){
+    action.style.display="inline-block"; action.textContent=actionLabel; action.onclick=()=>{actionFn();t.classList.remove("show");action.style.display="none"};
+  }else if(action){action.style.display="none";action.onclick=null}
+  t.classList.add("show");clearTimeout(window._tt);window._tt=setTimeout(()=>{t.classList.remove("show");if(action)action.style.display="none"},3600)
+}
 function isSameDay(a,b){return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate()}
 function eventsFor(date){return state.events.filter(e=>isSameDay(new Date(e.startISO),date)).sort((a,b)=>new Date(a.startISO)-new Date(b.startISO))}
 function normalize(s){return String(s||"").trim().replace(/ي/g,"ی").replace(/ك/g,"ک").replace(/\s+/g," ")}
@@ -37,7 +49,7 @@ async function seed(){
   }
 }
 async function loadState(){
-  state.tasks=await all("tasks");state.events=await all("events");state.parking=await all("parking");state.memory=await all("memory");state.chat=await all("chat");
+  state.tasks=await all("tasks");state.events=await all("events");state.parking=await all("parking");state.memory=await all("memory");state.chat=await all("chat");state.projects=await all("projects");state.projectTasks=await all("projectTasks");
 }
 async function init(){
   try{
@@ -63,7 +75,7 @@ function wire(){
   $("askInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();askNOVA()}});
 }
 function renderAll(){
-  renderHome();renderTasks();renderMemoryParking();renderChat();renderPlanner();
+  renderHome();renderTasks();renderMemoryParking();renderChat();renderPlanner();renderProjects();if(currentProjectId)renderProjectDetail();
 }
 function renderHome(){
   const done=state.tasks.filter(t=>t.done).length,total=state.tasks.length,open=total-done,pct=total?Math.round(done/total*100):0;
@@ -74,10 +86,20 @@ function renderHome(){
   $("nextEvent").textContent=next?`${next.title} · ${pFull(new Date(next.startISO))}، ${faTime(new Date(next.startISO))}`:"قرار بعدی ثبت نشده.";
 }
 function taskRow(t){return `<div class="task-row"><button class="task-check ${t.done?"done":""}" onclick="toggleTask(${t.id})">${icon("check")}</button><div class="task-copy"><b>${esc(t.title)}</b><small>${t.done?"انجام شده":"در انتظار انجام"}</small></div><span class="time-pill">${esc(t.time||"امروز")}</span></div>`}
+
+function doneTaskRow(t){
+  return `<div class="task-row" id="done-task-${t.id}">
+    <button class="task-check done" onclick="toggleTask(${t.id})">${icon("check")}</button>
+    <div class="task-copy"><b>${esc(t.title)}</b><small>انجام شده</small></div>
+    <span class="time-pill">${esc(t.time||"امروز")}</span>
+    <button class="delete-btn" aria-label="حذف" onclick="deleteDoneTask(${t.id})">${icon("trash")}</button>
+  </div>`
+}
+
 function empty(s){return `<div class="timeline-empty">${esc(s)}</div>`}
 function renderTasks(){
   $("todayList").innerHTML=state.tasks.map(taskRow).join("")||empty("کاری ثبت نشده.");
-  $("doneList").innerHTML=state.tasks.filter(t=>t.done).map(taskRow).join("")||empty("هنوز کاری انجام نشده.");
+  $("doneList").innerHTML=state.tasks.filter(t=>t.done).map(doneTaskRow).join("")||empty("هنوز کاری انجام نشده.");
 }
 function renderMemoryParking(){
   $("parkingList").innerHTML=state.parking.map(p=>`<div class="task-row"><div class="task-copy"><b>${esc(p.text)}</b><small>پارک شده</small></div><button class="secondary" onclick="parkingToTask(${p.id})">تبدیل به کار</button></div>`).join("")||empty("پارکینگ خالی است.");
@@ -124,7 +146,7 @@ function eventRow(e){
 }
 window.selectPlannerDate=iso=>{planner.selected=new Date(iso);planner.anchor=new Date(iso);renderPlanner()}
 window.shiftPlannerMonth=dir=>{const d=dir>0?addDays(monthCells(planner.anchor).end,1):addDays(monthCells(planner.anchor).start,-1);planner.anchor=d;planner.selected=d;renderPlanner()}
-window.switchPage=id=>{document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$(id).classList.add("active");document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.page===id));window.scrollTo({top:0,behavior:"smooth"});if(id==="planner")renderPlanner()}
+window.switchPage=id=>{document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$(id).classList.add("active");document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active",n.dataset.page===id||(id==="projectDetail"&&n.dataset.page==="projects")));window.scrollTo({top:0,behavior:"smooth"});if(id==="planner")renderPlanner();if(id==="projects")renderProjects();if(id==="projectDetail"&&currentProjectId)renderProjectDetail()}
 window.toggleTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;t.done=!t.done;await put("tasks",t);await loadState();renderAll();toast(t.done?"انجام‌شده ثبت شد":"کار دوباره باز شد")}
 window.parkingToTask=async id=>{const p=state.parking.find(x=>x.id===id);if(!p)return;await put("tasks",{id:now(),title:p.text,time:"امروز",done:false,createdAt:now()});await remove("parking",id);await loadState();renderAll();toast("به کارهای امروز منتقل شد")}
 window.openEventSheet=()=>{$("eventSheet").classList.add("show");$("eventTitle").focus();$("eventDateLabel").value=pFull(planner.selected)}
@@ -142,6 +164,16 @@ window.askNOVA=async()=>{
   if(q.includes("ساعت")&&q.includes("چند")) return pushChat("ai",`الان ساعت ${faTime(new Date())} است.`);
   if(q.includes("چه کار")&&q.includes("مونده")){const a=state.tasks.filter(t=>!t.done);return pushChat("ai",a.length?`${faNum(a.length)} کار باز داری: ${a.slice(0,3).map(x=>x.title).join("، ")}`:"کار بازی باقی نمونده.");}
   if(q.includes("پارکینگ")&&(q.includes("بذار")||q.includes("بزار")||q.includes("ثبت"))){let t=q.replace(/.*پارکینگ/,"").replace(/^(بذار|بزار|ثبت کن|تو)/,"").trim();if(t){await put("parking",{id:now(),text:t,createdAt:now()});await loadState();renderAll();return pushChat("ai","گذاشتمش تو پارکینگ. برگردیم به کار اصلی.");}}
+
+  // Project-aware lightweight command
+  const pMatch=state.projects.find(p=>q.includes(p.title));
+  if(pMatch && (q.includes("کار")||q.includes("پروژه")||q.includes("انجام"))){
+    if(q.includes("انجام شد")){
+      const pt=state.projectTasks.find(t=>t.projectId===pMatch.id && !t.done && q.includes(t.title));
+      if(pt){pt.done=true;await put("projectTasks",pt);await loadState();renderAll();return pushChat("ai",`ثبت شد؛ «${pt.title}» در پروژه «${pMatch.title}» انجام شد.`)}
+    }
+  }
+
   const parsed=parseNaturalEvent(q);
   if(parsed){
     await put("events",{id:now(),...parsed,createdAt:now(),location:"",notes:""});await loadState();planner.selected=new Date(parsed.startISO);planner.anchor=new Date(parsed.startISO);renderAll();
@@ -154,6 +186,128 @@ window.openQuickTask=()=>{$("taskSheet").classList.add("show");$("taskTitle").fo
 window.closeTaskSheet=e=>{if(!e||e.target.id==="taskSheet")$("taskSheet").classList.remove("show")}
 window.saveTask=async()=>{const t=$("taskTitle").value.trim();if(!t)return;await put("tasks",{id:now(),title:t,time:$("taskWhen").value||"امروز",done:false,createdAt:now()});$("taskTitle").value="";$("taskSheet").classList.remove("show");await loadState();renderAll();toast("کار اضافه شد")}
 window.showDiagnostics=async()=>{const est=await navigator.storage?.estimate?.();alert(`NOVA v0.6\nTasks: ${state.tasks.length}\nEvents: ${state.events.length}\nMemory: ${state.memory.length}\nStorage: ${est?Math.round((est.usage||0)/1024/1024)+" MB":"unknown"}\nWebGPU: ${navigator.gpu?"yes":"no"}`)}
+
+window.deleteDoneTask=async id=>{
+  const t=state.tasks.find(x=>x.id===id);if(!t)return;
+  const el=$(`done-task-${id}`);if(el)el.classList.add("removing");
+  setTimeout(async()=>{
+    lastDeletedTask={...t};
+    await remove("tasks",id);await loadState();renderAll();
+    toast("کار حذف شد","برگرداندن",async()=>{
+      if(!lastDeletedTask)return;
+      await put("tasks",lastDeletedTask);lastDeletedTask=null;await loadState();renderAll();toast("کار برگردانده شد")
+    });
+  },220)
+};
+
+function projectTasks(id){return state.projectTasks.filter(t=>t.projectId===id)}
+function projectProgress(id){
+  const a=projectTasks(id),done=a.filter(t=>t.done).length,total=a.length;
+  return {total,done,left:total-done,pct:total?Math.round(done/total*100):0}
+}
+function projectStatusLabel(s){return s==="done"?"تکمیل‌شده":s==="paused"?"متوقف":"فعال"}
+function dateValue(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+
+function renderProjects(){
+  const root=$("projectsList");if(!root)return;
+  if(!state.projects.length){
+    root.innerHTML=`<div class="glass project-empty">هنوز پروژه‌ای ساخته نشده.<br><button class="primary" style="margin-top:12px" onclick="openProjectSheet()">ساخت اولین پروژه</button></div>`;return;
+  }
+  root.innerHTML=state.projects.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).map(p=>{
+    const pr=projectProgress(p.id);
+    const tasks=projectTasks(p.id).filter(t=>!t.done).sort((a,b)=>(a.dueISO||"").localeCompare(b.dueISO||""));
+    const next=tasks.find(t=>t.dueISO);
+    return `<button class="project-card" onclick="openProject(${p.id})">
+      <div class="project-card-head"><div><h3>${esc(p.title)}</h3><p>${esc(p.description||"بدون توضیح")}</p></div><div class="project-percent">${faNum(pr.pct)}٪</div></div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pr.pct}%"></div></div>
+      <div class="project-stats">
+        <span class="chip">${faNum(pr.total)} کار</span><span class="chip">${faNum(pr.done)} انجام‌شده</span><span class="chip">${faNum(pr.left)} باقی</span>
+        <span class="chip">${projectStatusLabel(p.status)}</span>${next?`<span class="chip">بعدی: ${esc(next.title)}</span>`:""}
+      </div>
+    </button>`
+  }).join("");
+}
+
+window.openProjectSheet=()=>{
+  $("projectSheet").classList.add("show");$("projectTitle").focus();
+  $("projectStart").value=dateValue();$("projectEnd").value="";
+}
+window.closeProjectSheet=e=>{if(!e||e.target.id==="projectSheet")$("projectSheet").classList.remove("show")}
+window.saveProject=async()=>{
+  const title=$("projectTitle").value.trim();if(!title)return toast("نام پروژه رو وارد کن");
+  const p={id:now(),title,description:$("projectDescription").value.trim(),start:$("projectStart").value,end:$("projectEnd").value,status:$("projectStatus").value||"active",createdAt:now()};
+  await put("projects",p);$("projectSheet").classList.remove("show");["projectTitle","projectDescription","projectEnd"].forEach(id=>$(id).value="");
+  await loadState();renderAll();toast("پروژه ساخته شد");openProject(p.id)
+}
+window.openProject=id=>{currentProjectId=id;currentProjectTab="overview";switchPage("projectDetail");renderProjectDetail()}
+window.switchProjectTab=tab=>{
+  currentProjectTab=tab;document.querySelectorAll(".project-tab").forEach(b=>b.classList.toggle("active",b.dataset.projectTab===tab));
+  document.querySelectorAll(".project-pane").forEach(p=>p.classList.remove("active"));
+  const map={overview:"projectPaneOverview",tasks:"projectPaneTasks",planner:"projectPanePlanner",progress:"projectPaneProgress"};
+  $(map[tab]).classList.add("active")
+}
+function renderProjectDetail(){
+  const p=state.projects.find(x=>x.id===currentProjectId);if(!p)return;
+  const pr=projectProgress(p.id),pts=projectTasks(p.id).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+  $("projectDetailTitle").textContent=p.title;$("projectDetailDesc").textContent=p.description||"بدون توضیح";
+  $("projectProgressText").textContent=faNum(pr.pct)+"٪";
+  $("projectProgressRing").style.background=`conic-gradient(var(--purple) 0 ${pr.pct}%,rgba(255,255,255,.06) ${pr.pct}%)`;
+  $("projectMetaChips").innerHTML=`<span class="chip">${projectStatusLabel(p.status)}</span>${p.start?`<span class="chip">شروع: ${esc(p.start)}</span>`:""}${p.end?`<span class="chip">پایان: ${esc(p.end)}</span>`:""}`;
+  $("projectPaneOverview").innerHTML=`<div class="glass card">
+    <div class="project-kpis"><div class="kpi"><b>${faNum(pr.total)}</b><span>کل کارها</span></div><div class="kpi"><b>${faNum(pr.done)}</b><span>انجام‌شده</span></div><div class="kpi"><b>${faNum(pr.left)}</b><span>باقی‌مانده</span></div></div>
+    <div class="project-overall-chart"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:8px"><span>پیشرفت پروژه</span><b>${faNum(pr.pct)}٪</b></div><div class="bar"><i style="width:${pr.pct}%"></i></div></div>
+    <button class="primary" style="width:100%;margin-top:12px" onclick="openProjectTaskSheet()">+ افزودن کار پروژه</button>
+  </div>`;
+  $("projectPaneTasks").innerHTML=`<div class="glass card">${pts.length?pts.map(pt=>projectTaskRow(pt)).join(""):'<div class="project-empty">کاری برای این پروژه ثبت نشده.</div>'}<button class="primary" style="width:100%;margin-top:10px" onclick="openProjectTaskSheet()">+ کار جدید</button></div>`;
+  const scheduled=pts.filter(t=>t.dueISO).sort((a,b)=>new Date(a.dueISO)-new Date(b.dueISO));
+  $("projectPanePlanner").innerHTML=`<div class="glass card">${scheduled.length?scheduled.map(t=>`<div class="project-schedule-item"><div class="project-schedule-time">${faTime(new Date(t.dueISO))}<br>${new Intl.DateTimeFormat("fa-IR-u-ca-persian",{month:"short",day:"numeric"}).format(new Date(t.dueISO))}</div><div><b style="font-size:12px">${esc(t.title)}</b><div class="pt-meta">${t.addToCalendar?"در تقویم NOVA":"فقط پروژه"} · ${t.done?"انجام شده":"باز"}</div></div></div>`).join(""):'<div class="project-empty">برنامه زمان‌داری ثبت نشده.</div>'}<button class="primary" style="width:100%;margin-top:10px" onclick="openProjectTaskSheet()">+ برنامه‌ریزی کار</button></div>`;
+  $("projectPaneProgress").innerHTML=`<div class="glass card"><div class="project-kpis"><div class="kpi"><b>${faNum(pr.pct)}٪</b><span>پیشرفت</span></div><div class="kpi"><b>${faNum(pr.done)}</b><span>تکمیل</span></div><div class="kpi"><b>${faNum(pr.left)}</b><span>باز</span></div></div><div class="project-overall-chart"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:9px"><span>درصد تکمیل بر اساس کارها</span><b>${faNum(pr.done)} / ${faNum(pr.total)}</b></div><div class="bar"><i style="width:${pr.pct}%"></i></div></div></div>`;
+  switchProjectTab(currentProjectTab);
+}
+function projectTaskRow(t){
+  return `<div class="project-task ${t.done?"done":""}" id="pt-${t.id}">
+    <button class="task-check ${t.done?"done":""}" onclick="toggleProjectTask(${t.id})">${icon("check")}</button>
+    <div class="pt-copy"><div class="pt-title">${esc(t.title)}</div><div class="pt-meta">${t.dueISO?`${pFull(new Date(t.dueISO))} · ${faTime(new Date(t.dueISO))}`:"بدون زمان"} · ${t.priority==="high"?"مهم":t.priority==="low"?"کم":"عادی"}</div></div>
+    <button class="delete-btn" onclick="deleteProjectTask(${t.id})">${icon("trash")}</button>
+  </div>`
+}
+window.openProjectTaskSheet=()=>{
+  if(!currentProjectId)return;
+  $("projectTaskSheet").classList.add("show");$("projectTaskTitle").focus();$("projectTaskDate").value=dateValue();
+}
+window.closeProjectTaskSheet=e=>{if(!e||e.target.id==="projectTaskSheet")$("projectTaskSheet").classList.remove("show")}
+window.saveProjectTask=async()=>{
+  if(!currentProjectId)return;
+  const title=$("projectTaskTitle").value.trim();if(!title)return toast("عنوان کار رو وارد کن");
+  let dueISO="";const ds=$("projectTaskDate").value,ts=$("projectTaskTime").value||"09:00";
+  if(ds){const [y,m,d]=ds.split("-").map(Number),[h,mi]=ts.split(":").map(Number);dueISO=new Date(y,m-1,d,h,mi,0,0).toISOString()}
+  const addToCalendar=$("projectTaskCalendar").value==="yes";
+  const id=now();
+  const t={id,projectId:currentProjectId,title,dueISO,priority:$("projectTaskPriority").value||"normal",addToCalendar,done:false,createdAt:now()};
+  await put("projectTasks",t);
+  if(addToCalendar && dueISO){
+    const p=state.projects.find(x=>x.id===currentProjectId);
+    await put("events",{id:id+1,title:`${p?.title||"پروژه"} — ${title}`,startISO:dueISO,durationMin:60,alertBeforeMin:60,location:"",notes:"کار پروژه",type:"project",projectId:currentProjectId,projectTaskId:id,createdAt:now()});
+  }
+  $("projectTaskSheet").classList.remove("show");$("projectTaskTitle").value="";
+  await loadState();renderAll();renderProjectDetail();toast("کار پروژه اضافه شد")
+}
+window.toggleProjectTask=async id=>{
+  const t=state.projectTasks.find(x=>x.id===id);if(!t)return;t.done=!t.done;await put("projectTasks",t);
+  await loadState();renderAll();renderProjectDetail();toast(t.done?"کار پروژه انجام شد":"کار دوباره باز شد")
+}
+window.deleteProjectTask=async id=>{
+  const t=state.projectTasks.find(x=>x.id===id);if(!t)return;await remove("projectTasks",id);
+  const linked=state.events.filter(e=>e.projectTaskId===id);for(const e of linked)await remove("events",e.id);
+  await loadState();renderAll();renderProjectDetail();toast("کار پروژه حذف شد")
+};
+
+/* tactile visual response on tap */
+document.addEventListener("pointerdown",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  b.classList.remove("icon-pop");void b.offsetWidth;b.classList.add("icon-pop");
+},{passive:true});
+
 init();
 
 if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").catch(console.error)}
