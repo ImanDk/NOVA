@@ -1,13 +1,13 @@
 {
-  "name": "NOVA — Voice Personal Assistant",
-  "short_name": "NOVA",
-  "lang": "fa",
-  "dir": "rtl",
+  "name": "MIA — دستیار مالی و کاری ایمان",
+  "short_name": "MIA",
+  "description": "دستیار مالی، کاری و برنامه‌ریزی شخصی ایمان",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#050713",
-  "theme_color": "#050713",
+  "background_color": "#03100f",
+  "theme_color": "#041312",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "icon-192.png",
@@ -19,6 +19,5 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ],
-  "description": "NOVA Persian personal assistant — polished mobile UX, voice, planner and projects."
+  ]
 }

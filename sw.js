@@ -1,13 +1,6 @@
 
-const CACHE="nova-v072-visual-polish";
-const STATIC=["./","./index.html","./styles.css","./app.js","./db.js","./planner.js","./voice.js","./device-bridge.js","./setup-v07.html","./manifest.json","./icon-192.png","./icon-512.png"];
-self.addEventListener("install",e=>{self.skipWaiting();e.waitUntil(caches.open(CACHE).then(c=>c.addAll(STATIC)))});
+const CACHE="mia-v080-financial-core";
+const FILES=["./","./index.html","./styles.css","./app.js","./db.js","./planner.js","./manifest.json","./icon-192.png","./icon-512.png","./setup-ios.html"];
+self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener("fetch",e=>{
-  if(e.request.method!=="GET")return;
-  const u=new URL(e.request.url);if(u.origin!==location.origin)return;
-  e.respondWith(caches.match(e.request).then(cached=>{
-    const net=fetch(e.request).then(r=>{if(r&&r.ok){const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy))}return r}).catch(()=>cached);
-    return cached||net;
-  }));
-});
+self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWith(fetch(e.request).then(r=>{const c=r.clone();caches.open(CACHE).then(x=>x.put(e.request,c));return r}).catch(()=>caches.match(e.request).then(r=>r||caches.match("./index.html"))))});
