@@ -241,15 +241,17 @@
       <div class="week-labels"><span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span>ج</span></div>
       <div class="month-grid" id="monthGrid"></div>
     </div>
-    <div class="section-head"><div><h2 id="selectedDate"></h2><small class="selected-day-help" id="selectedDayHelp">یک‌بار انتخاب کن؛ دوبار بزن تا جزئیات روز باز شود.</small></div><button onclick="addTaskForSelectedDay()">+ کار</button></div>
-    <button class="panel day-preview-card" id="dayEvents" onclick="openSelectedDayDetails()">
-      <span class="day-preview-icon" data-icon="calendar"></span>
+    <div class="section-head selected-day-head">
       <div>
-        <b id="dayPreviewTitle">جزئیات این روز</b>
-        <small id="dayPreviewText">برای مشاهده کارها و برنامه‌ها، دوبار روی تاریخ بزن.</small>
+        <h2 id="selectedDate"></h2>
+        <small class="selected-day-help" id="selectedDayHelp">کارها و برنامه‌های همین روز</small>
       </div>
-      <span class="day-preview-chevron" data-icon="chevron-left"></span>
-    </button>
+      <div class="selected-day-actions">
+        <button class="calendar-add-task" onclick="addTaskForSelectedDay()"><span data-icon="plus"></span> کار</button>
+        <button class="calendar-add-event" onclick="openEventSheet()"><span data-icon="calendar"></span> برنامه</button>
+      </div>
+    </div>
+    <div class="panel timeline day-inline-list" id="dayEvents"></div>
   </div>
 
   <div class="planner-pane" id="planner-tasks">
@@ -303,7 +305,7 @@
 
   <div class="settings-group-title">درباره MIA</div>
   <div class="panel settings-list">
-    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v0.9.1</b><small>دستیار مالی، کاری و برنامه‌ریزی شخصی ایمان</small></div></div>
+    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v0.9.2</b><small>دستیار مالی، کاری و برنامه‌ریزی شخصی ایمان</small></div></div>
   </div>
 </section>
 
@@ -320,34 +322,6 @@
 </nav>
 
 
-
-<!-- CALENDAR DAY DETAIL -->
-<div class="overlay" id="dayDetailSheet" onclick="closeOverlay(event,'dayDetailSheet')">
-  <div class="sheet day-detail-sheet" onclick="event.stopPropagation()">
-    <div class="handle"></div>
-    <div class="sheet-title">
-      <div>
-        <span class="accent">جزئیات روز</span>
-        <h2 id="dayDetailTitle">—</h2>
-      </div>
-      <button onclick="closeSheet('dayDetailSheet')">×</button>
-    </div>
-
-    <div class="day-detail-summary" id="dayDetailSummary"></div>
-    <div class="day-detail-list" id="dayDetailList"></div>
-
-    <div class="day-detail-actions">
-      <button class="primary big" onclick="addTaskForSelectedDay()">
-        <span data-icon="plus"></span>
-        افزودن کار برای این روز
-      </button>
-      <button class="ghost" onclick="addEventForSelectedDay()">
-        <span data-icon="calendar"></span>
-        افزودن برنامه زمان‌دار
-      </button>
-    </div>
-  </div>
-</div>
 
 <!-- NOTIFICATIONS -->
 <div class="overlay" id="notificationSheet" onclick="closeOverlay(event,'notificationSheet')">

@@ -1,7 +1,7 @@
 {
   "name": "MIA — دستیار شخصی ایمان",
   "short_name": "MIA",
-  "description": "MIA v0.9.1 — Calendar day popup and overdue red alerts",
+  "description": "MIA v0.9.2 — Single tap calendar with inline daily task list",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

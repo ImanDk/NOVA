@@ -1019,3 +1019,154 @@ input,textarea,select{
   color:#ff6b73;
   background:rgba(255,107,115,.1);
 }
+
+
+/* ==========================================================
+   MIA v0.9.2 — Single-tap Calendar
+   ========================================================== */
+
+/* Disable old double-tap visual affordance. */
+.day-cell.selected::after{
+  content:none!important;
+}
+.day-cell.day-opened{
+  animation:none!important;
+}
+
+/* Single tap feedback */
+.day-cell.day-selected-pop{
+  animation:miaSingleDayTap .28s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes miaSingleDayTap{
+  0%{transform:scale(.92)}
+  55%{transform:scale(1.055)}
+  100%{transform:scale(1)}
+}
+
+/* Selected-day controls */
+.selected-day-head{
+  align-items:flex-end;
+}
+.selected-day-actions{
+  display:flex;
+  gap:6px;
+  align-items:center;
+}
+.calendar-add-task,
+.calendar-add-event{
+  min-height:34px;
+  padding:0 10px;
+  border-radius:11px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.028);
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  font-size:9px;
+  white-space:nowrap;
+  transition:
+    transform .17s ease,
+    border-color .2s ease,
+    background-color .2s ease,
+    color .2s ease;
+}
+.calendar-add-task{
+  color:var(--green);
+  border-color:rgba(66,230,164,.18);
+  background:rgba(66,230,164,.055);
+}
+.calendar-add-event{
+  color:var(--cyan);
+  border-color:rgba(57,215,232,.16);
+  background:rgba(57,215,232,.045);
+}
+.calendar-add-task span,
+.calendar-add-event span{
+  width:15px;height:15px;
+}
+.calendar-add-task:active,
+.calendar-add-event:active{
+  transform:scale(.95);
+}
+@media(hover:hover) and (pointer:fine){
+  .calendar-add-task:hover{
+    background:rgba(66,230,164,.10);
+    border-color:rgba(66,230,164,.30);
+    transform:translateY(-1px);
+  }
+  .calendar-add-event:hover{
+    background:rgba(57,215,232,.09);
+    border-color:rgba(57,215,232,.27);
+    transform:translateY(-1px);
+  }
+}
+
+/* Inline list under the calendar */
+.day-inline-list{
+  min-height:76px;
+  max-height:360px;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+.day-inline-list::-webkit-scrollbar{display:none}
+.day-inline-list.day-list-enter{
+  animation:miaInlineDayList .34s cubic-bezier(.22,.8,.22,1) both;
+}
+@keyframes miaInlineDayList{
+  from{opacity:0;transform:translateY(8px) scale(.992)}
+  to{opacity:1;transform:none}
+}
+.day-inline-list.day-list-enter .event-row{
+  animation:miaInlineDayRow .3s ease both;
+}
+.day-inline-list.day-list-enter .event-row:nth-child(2){animation-delay:.035s}
+.day-inline-list.day-list-enter .event-row:nth-child(3){animation-delay:.07s}
+.day-inline-list.day-list-enter .event-row:nth-child(4){animation-delay:.105s}
+.day-inline-list.day-list-enter .event-row:nth-child(5){animation-delay:.14s}
+@keyframes miaInlineDayRow{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:none}
+}
+
+.calendar-empty-day{
+  min-height:72px;
+  display:grid;
+  grid-template-columns:38px 1fr;
+  gap:10px;
+  align-items:center;
+  padding:10px 2px;
+}
+.calendar-empty-day>span{
+  width:36px;height:36px;
+  border-radius:12px;
+  display:grid;place-items:center;
+  color:var(--cyan);
+  background:rgba(57,215,232,.06);
+}
+.calendar-empty-day>span svg{width:17px;height:17px}
+.calendar-empty-day b{display:block;font-size:10px}
+.calendar-empty-day small{
+  display:block;
+  color:var(--muted);
+  font-size:8px;
+  line-height:1.7;
+  margin-top:3px;
+}
+
+@media(max-width:390px){
+  .selected-day-head{
+    align-items:flex-start;
+  }
+  .selected-day-actions{
+    gap:4px;
+  }
+  .calendar-add-task,
+  .calendar-add-event{
+    padding:0 7px;
+    font-size:8px;
+  }
+}

@@ -104,7 +104,7 @@ async function init(){
   await openDB();await seed();await load();await ensureDefaultThursdays();await load();
   $("todayLabel").textContent=pFull(new Date());
   renderAll();installInteractionGuards();wireMode();
-  $("dbStatus").textContent="MIA v0.9.1 آماده است";
+  $("dbStatus").textContent="MIA v0.9.2 آماده است";
 }
 async function seed(){
   for(const [id,m] of Object.entries(ACCOUNT_META)){
@@ -420,7 +420,7 @@ function renderPlanner(){
   $("monthTitle").textContent=pMonthTitle(planner.anchor);$("selectedDate").textContent=pFull(planner.selected);
   const {cells}=monthCells(planner.anchor),ap=pParts(planner.anchor),today=new Date();
   $("monthGrid").innerHTML=cells.map(d=>{const pp=pParts(d),inside=pp.month===ap.month&&pp.year===ap.year,evCount=eventsFor(d).length,taskCount=tasksForDate(d,true).length,has=evCount+taskCount>0,key=localDateKey(d);return `<button class="day-cell ${inside?"":"muted"} ${isSameDay(d,today)?"today":""} ${isSameDay(d,planner.selected)?"selected":""}" data-day-key="${key}" onclick="handleDayClick('${d.toISOString()}','${key}')"><span>${pDayNum(d)}</span>${has?`<i class="day-indicator ${taskCount&&evCount?"mixed":taskCount?"task":"event"}"></i>`:""}</button>`}).join("");
-  renderDayPreview();
+  renderInlineDayItems();
   hydrateIcons()
 }
 function eventsFor(d){return state.events.filter(e=>isSameDay(new Date(e.startISO),d)).sort((a,b)=>new Date(a.startISO)-new Date(b.startISO))}
@@ -663,165 +663,76 @@ window.openPlannerTab=id=>{
   if(id==="done"||id==="tasks")renderTasks()
 };
 
-let dayTapState={key:"",at:0,timer:null};
-let reopenDayDetailAfterTask=false;
-
-function startOfDay(d){
-  const x=new Date(d);x.setHours(0,0,0,0);return x
-}
 function calendarDayItems(d){
   const events=eventsFor(d);
   const tasks=tasksForDate(d,true).sort((a,b)=>taskDate(a)-taskDate(b));
   return {events,tasks}
 }
-function renderDayPreview(){
-  const title=$("dayPreviewTitle"),text=$("dayPreviewText");
-  if(!title||!text)return;
+
+function renderInlineDayItems(){
+  const container=$("dayEvents");
+  if(!container)return;
+
   const {events,tasks}=calendarDayItems(planner.selected);
-  const open=tasks.filter(t=>!t.done).length;
-  const done=tasks.filter(t=>t.done).length;
-  title.textContent=`${fa(tasks.length)} کار · ${fa(events.length)} برنامه`;
-  if(!tasks.length&&!events.length){
-    text.textContent="چیزی برای این روز ثبت نشده؛ می‌توانی یک کار جدید اضافه کنی.";
-  }else{
-    const parts=[];
-    if(open)parts.push(`${fa(open)} کار باز`);
-    if(done)parts.push(`${fa(done)} انجام‌شده`);
-    if(events.length)parts.push(`${fa(events.length)} برنامه زمان‌دار`);
-    text.textContent=parts.join(" · ");
-  }
-}
-function dayDetailTaskRow(t){
-  const d=taskDate(t),cat=taskCategory(t),m=TASK_CATEGORY_META[cat];
-  const overdue=!t.done&&startOfDay(d)<startOfDay(new Date());
-  return `<div class="day-detail-row task ${t.done?"done":overdue?"overdue":""}">
-    <span class="day-detail-row-icon" data-icon="${t.done?"check":"briefcase"}"></span>
-    <div>
-      <b>${esc(t.title)}</b>
-      <small><span class="day-detail-category">${m.name}</span>${t.done?"انجام‌شده":overdue?"انجام‌نشده / عقب‌افتاده":"کار باز"}</small>
-    </div>
-    <div class="day-detail-row-actions">
-      ${t.done
-        ?`<button class="mini-action" onclick="reopenTaskFromDay(${JSON.stringify(t.id)})" aria-label="بازگردانی"><span data-icon="rotate-ccw"></span></button>`
-        :`<button class="mini-action success" onclick="completeTaskFromDay(${JSON.stringify(t.id)})" aria-label="انجام شد"><span data-icon="check"></span></button>`}
-      <button class="mini-action danger" onclick="deleteTaskFromDay(${JSON.stringify(t.id)})" aria-label="حذف"><span data-icon="trash"></span></button>
-    </div>
-  </div>`
-}
-function dayDetailEventRow(e){
-  const d=new Date(e.startISO);
-  return `<div class="day-detail-row event">
-    <span class="day-detail-row-icon" data-icon="calendar"></span>
-    <div>
-      <b>${esc(e.title)}</b>
-      <small>${new Intl.DateTimeFormat("fa-IR",{hour:"2-digit",minute:"2-digit"}).format(d)} · ${fa(e.durationMin||60)} دقیقه</small>
-    </div>
-    <div class="day-detail-row-actions">
-      <button class="mini-action" onclick="editEventFromDay(${JSON.stringify(e.id)})"><span data-icon="edit"></span></button>
-      <button class="mini-action danger" onclick="deleteEventFromDay(${JSON.stringify(e.id)})"><span data-icon="trash"></span></button>
-    </div>
-  </div>`
-}
-function renderDayDetailSheet(){
-  const {events,tasks}=calendarDayItems(planner.selected);
-  const open=tasks.filter(t=>!t.done).length,done=tasks.filter(t=>t.done).length;
-  $("dayDetailTitle").textContent=pFull(planner.selected);
-  $("dayDetailSummary").innerHTML=`<div><b>${fa(tasks.length)}</b><span>کار</span></div><div><b>${fa(open)}</b><span>باز</span></div><div><b>${fa(done)}</b><span>انجام‌شده</span></div><div><b>${fa(events.length)}</b><span>برنامه</span></div>`;
   const rows=[
-    ...tasks.map(t=>({time:taskDate(t),html:dayDetailTaskRow(t)})),
-    ...events.map(e=>({time:new Date(e.startISO),html:dayDetailEventRow(e)}))
-  ].sort((a,b)=>a.time-b.time);
-  $("dayDetailList").innerHTML=rows.length?rows.map(x=>x.html).join(""):empty("برای این روز هنوز کاری یا برنامه‌ای ثبت نشده.");
+    ...events.map(e=>({
+      date:new Date(e.startISO),
+      html:eventRow(e)
+    })),
+    ...tasks.map(t=>({
+      date:taskDate(t),
+      html:dayTaskRow(t)
+    }))
+  ].sort((a,b)=>a.date-b.date);
+
+  container.classList.remove("day-list-enter");
+  container.innerHTML=rows.length
+    ?rows.map(x=>x.html).join("")
+    :`<div class="calendar-empty-day">
+        <span data-icon="calendar"></span>
+        <div><b>برای این روز کاری ثبت نشده.</b><small>از دکمه «+ کار» برای اضافه کردن کار استفاده کن.</small></div>
+      </div>`;
+
+  void container.offsetWidth;
+  container.classList.add("day-list-enter");
+  setTimeout(()=>container.classList.remove("day-list-enter"),420);
   hydrateIcons()
 }
-window.openSelectedDayDetails=()=>{
-  renderDayDetailSheet();
-  openSheet("dayDetailSheet")
-};
+
 window.handleDayClick=(iso,key)=>{
-  const nowTs=Date.now();
-  const isDouble=dayTapState.key===key&&(nowTs-dayTapState.at)<=450;
-
-  if(dayTapState.timer){
-    clearTimeout(dayTapState.timer);
-    dayTapState.timer=null;
-  }
-
   planner.selected=new Date(iso);
   planner.anchor=new Date(iso);
 
-  // Update only selection state immediately; do not rebuild the grid between taps.
   document.querySelectorAll(".day-cell").forEach(cell=>{
     cell.classList.toggle("selected",cell.dataset.dayKey===key)
   });
+
   $("selectedDate").textContent=pFull(planner.selected);
-  renderDayPreview();
+  renderInlineDayItems();
 
-  if(isDouble){
-    dayTapState={key:"",at:0,timer:null};
-    const selected=document.querySelector(`.day-cell[data-day-key="${key}"]`);
-    if(selected){
-      selected.classList.remove("day-opened");
-      void selected.offsetWidth;
-      selected.classList.add("day-opened");
-    }
-    openSelectedDayDetails();
-    return
+  const selected=document.querySelector(`.day-cell[data-day-key="${key}"]`);
+  if(selected){
+    selected.classList.remove("day-selected-pop");
+    void selected.offsetWidth;
+    selected.classList.add("day-selected-pop");
   }
-
-  dayTapState.key=key;
-  dayTapState.at=nowTs;
-  dayTapState.timer=setTimeout(()=>{
-    dayTapState={key:"",at:0,timer:null}
-  },470);
 };
+
 window.selectDate=iso=>{
   planner.selected=new Date(iso);
   planner.anchor=new Date(iso);
-  renderPlanner();
-  renderDayPreview()
+  renderPlanner()
 };
+
 window.shiftMonth=dir=>{
   const {start,end}=monthCells(planner.anchor);
   planner.anchor=dir>0?addDays(end,1):addDays(start,-1);
   planner.selected=planner.anchor;
-  if(dayTapState.timer)clearTimeout(dayTapState.timer);
-  dayTapState={key:"",at:0,timer:null};
-  renderPlanner();
-  renderDayPreview()
+  renderPlanner()
 };
 
 window.addTaskForSelectedDay=()=>{
-  reopenDayDetailAfterTask=$("dayDetailSheet")?.classList.contains("show")||false;
-  if(reopenDayDetailAfterTask)closeSheet("dayDetailSheet");
-  setTimeout(()=>openTaskSheet(),reopenDayDetailAfterTask?190:0)
-};
-window.addEventForSelectedDay=()=>{
-  if($("dayDetailSheet")?.classList.contains("show"))closeSheet("dayDetailSheet");
-  setTimeout(()=>openEventSheet(),190)
-};
-window.completeTaskFromDay=async id=>{
-  const t=state.tasks.find(x=>x.id===id);if(!t)return;
-  await put("tasks",{...t,done:true,doneAt:now()});
-  await load();renderAll();renderDayDetailSheet();renderDayPreview();toast("کار انجام شد ✓")
-};
-window.reopenTaskFromDay=async id=>{
-  const t=state.tasks.find(x=>x.id===id);if(!t)return;
-  await put("tasks",{...t,done:false,doneAt:null});
-  await load();renderAll();renderDayDetailSheet();renderDayPreview();toast("کار دوباره باز شد")
-};
-window.deleteTaskFromDay=async id=>{
-  const t=state.tasks.find(x=>x.id===id);if(!t)return;
-  if(!confirm(`«${t.title}» حذف شود؟`))return;
-  await remove("tasks",id);await load();renderAll();renderDayDetailSheet();renderDayPreview();toast("کار حذف شد")
-};
-window.editEventFromDay=id=>{
-  closeSheet("dayDetailSheet");
-  setTimeout(()=>editEvent(id),190)
-};
-window.deleteEventFromDay=async id=>{
-  await deleteEvent(id);
-  renderDayDetailSheet();renderDayPreview()
+  openTaskSheet()
 };
 
 const SHEET_MOTION_MS=300;
@@ -1054,15 +965,12 @@ window.saveTask=async()=>{
   const rawTitle=$("taskTitle").value.trim();if(!rawTitle)return;
   const title=normalizeWorkTitle(rawTitle),d=new Date(planner.selected);d.setHours(9,0,0,0);
   await put("tasks",{id:now(),title,rawTitle,time:pFull(d),dueISO:d.toISOString(),done:false,category:detectTaskCategory(`${rawTitle} ${title}`),createdAt:now()});
-  await load();renderAll();closeSheet("taskSheet");renderDayPreview();toast(`«${title}» به فهرست کارها اضافه شد ✓`);
-  if(reopenDayDetailAfterTask){
-    reopenDayDetailAfterTask=false;
-    setTimeout(()=>openSelectedDayDetails(),330)
-  }
+  await load();renderAll();closeSheet("taskSheet");renderInlineDayItems();
+  toast(`«${title}» به کارهای ${pFull(d)} اضافه شد ✓`)
 };
 window.toggleTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;const category=t.category||detectTaskCategory(t.title);await put("tasks",{...t,category,done:true,doneAt:now()});await load();renderAll();toast(`انجام شد · در دسته «${TASK_CATEGORY_META[category].name}» ثبت شد ✓`)};
 window.reopenTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;await put("tasks",{...t,done:false,doneAt:null});await load();renderAll();openPlannerTab("tasks");toast("کار دوباره به فهرست باز برگشت")};
-window.deleteTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;if(!confirm(`«${t.title}» حذف شود؟`))return;await remove("tasks",id);await load();renderAll();toast("کار حذف شد")};
+window.deleteTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;if(!confirm(`«${t.title}» حذف شود؟`))return;await remove("tasks",id);await load();renderAll();renderInlineDayItems();toast("کار حذف شد")};
 window.openProjectSheet=()=>{$("projectTitle").value="";$("projectValue").value="";openSheet("projectSheet")};
 window.saveProject=async()=>{const title=$("projectTitle").value.trim();if(!title)return toast("نام پروژه را وارد کن.");const value=parseAmount($("projectValue").value,"income");await put("projects",{id:now(),title,value,status:"فعال",createdAt:now()});await load();renderAll();closeSheet("projectSheet");toast("پروژه فریلنس ساخته شد ✓")};
 window.resetHoorsunCycle=async()=>{
@@ -1077,7 +985,7 @@ function renderSettingsPage(){
 }
 
 window.exportData=async()=>{
-  const data={exportedAt:new Date().toISOString(),version:"MIA 0.9.1",...state};
+  const data={exportedAt:new Date().toISOString(),version:"MIA 0.9.2",...state};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`MIA-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 };
 async function undoLast(){
