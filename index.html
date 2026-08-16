@@ -21,17 +21,41 @@
 <main class="app">
 <header class="topbar">
   <div class="brand">
-    <div class="brand-mark">M</div>
+    <div class="brand-mark mia-logo-mark"><svg class="mia-logo-svg" viewBox="0 0 48 48" aria-hidden="true">
+  <defs>
+    <linearGradient id="miaG" x1="7" y1="7" x2="41" y2="41" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#42e6a4"/><stop offset="1" stop-color="#39d7e8"/>
+    </linearGradient>
+  </defs>
+  <rect x="3.5" y="3.5" width="41" height="41" rx="13.5" fill="url(#miaG)"/>
+  <path d="M12.5 32V16.2c0-1.4 1.7-2.1 2.7-1.1L24 24l8.8-8.9c1-1 2.7-.3 2.7 1.1V32"
+        fill="none" stroke="#03110f" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="36.5" cy="11.5" r="3.1" fill="#03110f"/>
+</svg></div>
     <div><b>MIA</b><small id="todayLabel">دستیار مالی و کاری ایمان</small></div>
   </div>
   <div class="top-actions">
-    <button class="icon-btn notification-btn" onclick="location.href='setup-ios.html'" aria-label="تنظیم یادآوری شبانه"><span data-icon="bell"></span></button>
+    <button class="icon-btn notification-btn" onclick="openNotifications()" aria-label="اعلان‌های MIA"><span data-icon="bell"></span><i id="notificationBadge">۰</i></button>
     <button class="icon-btn" onclick="openSettings()" aria-label="تنظیمات"><span data-icon="settings"></span></button>
   </div>
 </header>
 
 <!-- HOME -->
 <section class="page active" id="home">
+  <div class="mia-home-signature">
+    <div class="mia-home-logo"><svg class="mia-logo-svg" viewBox="0 0 48 48" aria-hidden="true">
+  <defs>
+    <linearGradient id="miaG" x1="7" y1="7" x2="41" y2="41" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#42e6a4"/><stop offset="1" stop-color="#39d7e8"/>
+    </linearGradient>
+  </defs>
+  <rect x="3.5" y="3.5" width="41" height="41" rx="13.5" fill="url(#miaG)"/>
+  <path d="M12.5 32V16.2c0-1.4 1.7-2.1 2.7-1.1L24 24l8.8-8.9c1-1 2.7-.3 2.7 1.1V32"
+        fill="none" stroke="#03110f" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="36.5" cy="11.5" r="3.1" fill="#03110f"/>
+</svg></div>
+    <div><b>MIA</b><small>Money · Work · Time</small></div>
+  </div>
   <div class="hello home-welcome"><span>سلام ایمان 👋</span><h1 id="miaInsight">امروز روی مهم‌ترین کار تمرکز کن.</h1></div>
 
   <button class="quick-entry-card" onclick="openQuick()">
@@ -243,7 +267,17 @@
   </div>
 
   <div class="settings-profile panel">
-    <div class="settings-avatar">M</div>
+    <div class="settings-avatar mia-settings-logo"><svg class="mia-logo-svg" viewBox="0 0 48 48" aria-hidden="true">
+  <defs>
+    <linearGradient id="miaG" x1="7" y1="7" x2="41" y2="41" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#42e6a4"/><stop offset="1" stop-color="#39d7e8"/>
+    </linearGradient>
+  </defs>
+  <rect x="3.5" y="3.5" width="41" height="41" rx="13.5" fill="url(#miaG)"/>
+  <path d="M12.5 32V16.2c0-1.4 1.7-2.1 2.7-1.1L24 24l8.8-8.9c1-1 2.7-.3 2.7 1.1V32"
+        fill="none" stroke="#03110f" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="36.5" cy="11.5" r="3.1" fill="#03110f"/>
+</svg></div>
     <div><b>ایمان</b><small>دستیار شخصی مالی و کاری</small></div>
     <div class="settings-balance"><span>کل موجودی ثبت‌شده</span><strong id="settingsTotalBalance">۰ تومان</strong></div>
   </div>
@@ -263,7 +297,7 @@
 
   <div class="settings-group-title">درباره MIA</div>
   <div class="panel settings-list">
-    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v0.8.5</b><small>دستیار مالی، کاری و برنامه‌ریزی شخصی ایمان</small></div></div>
+    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v0.8.6</b><small>دستیار مالی، کاری و برنامه‌ریزی شخصی ایمان</small></div></div>
   </div>
 </section>
 
@@ -279,6 +313,25 @@
   <button class="nav" data-page="planner" onclick="switchPage('planner')"><span class="nav-icon" data-icon="calendar"></span><small>برنامه</small></button>
 </nav>
 
+
+<!-- NOTIFICATIONS -->
+<div class="overlay" id="notificationSheet" onclick="closeOverlay(event,'notificationSheet')">
+  <div class="sheet notification-sheet" onclick="event.stopPropagation()">
+    <div class="handle"></div>
+    <div class="sheet-title">
+      <div><span class="accent">مرکز اعلان‌های MIA</span><h2>چه چیزی نیاز به توجه دارد؟</h2></div>
+      <button onclick="closeSheet('notificationSheet')">×</button>
+    </div>
+    <div class="notification-summary" id="notificationSummary"></div>
+    <div class="notification-list" id="notificationList"></div>
+    <a class="notification-reminder-link" href="setup-ios.html">
+      <span data-icon="bell"></span>
+      <div><b>یادآوری شبانه ساعت ۰۰:۰۰</b><small>برای اعلان حتی وقتی MIA بسته است، از Reminder خود iPhone استفاده کن.</small></div>
+      <span data-icon="chevron-left"></span>
+    </a>
+  </div>
+</div>
+
 <!-- QUICK ENTRY -->
 <div class="overlay" id="quickSheet" onclick="closeOverlay(event,'quickSheet')">
   <div class="sheet quick-sheet" onclick="event.stopPropagation()">
@@ -290,9 +343,9 @@
       <button onclick="prefillQuick('750 بنزین')">بنزین</button>
       <button onclick="prefillQuick('فیلم‌برداری هورسان انجام شد')">فیلم‌برداری هورسان</button>
     </div>
-    <textarea id="quickInput" rows="3" placeholder="مثلاً: ۱۴۰ سیگار&#10;یا: فردا سایت مشتری را اصلاح کنم"></textarea>
+    <textarea id="quickInput" rows="3" placeholder="مثلاً: امروز باید ویدیو هورسان رو ادیت کنم&#10;یا: پیج هورسان رو افتتاح کردم"></textarea>
     <button class="primary big" onclick="submitQuick()">ثبت با MIA</button>
-    <p class="quick-help">هزینه، درآمد، انتقال پول، مراحل هورسان، کار انجام‌شده، کار آینده و برنامه زمان‌دار را تشخیص می‌دهد.</p>
+    <p class="quick-help">جمله را طبیعی بنویس؛ MIA عنوان کار، دسته، زمان و انجام‌شده یا باز بودن آن را خودش تشخیص می‌دهد.</p>
   </div>
 </div>
 

@@ -231,3 +231,105 @@ input,textarea{font-weight:450}
 .selected-day-help{line-height:1.6}
 .settings-static small,.settings-row small{line-height:1.65}
 .stage-hint{max-width:95%}
+
+
+/* ==========================================================
+   MIA v0.8.6 — Smart Tasks + Motion + Notification Center
+   ========================================================== */
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.app{min-height:100dvh}
+.page{transform-origin:50% 18%}
+.page.active{display:block;animation:none}
+.page.page-entering{animation:miaPageEnter .34s cubic-bezier(.22,.8,.22,1) both}
+.page.page-leaving{display:block;position:absolute;inset:auto 14px;pointer-events:none;animation:miaPageLeave .12s ease both}
+@keyframes miaPageEnter{from{opacity:0;transform:translateY(10px) scale(.992);filter:blur(2px)}to{opacity:1;transform:none;filter:none}}
+@keyframes miaPageLeave{to{opacity:0;transform:translateY(-4px) scale(.995)}}
+
+.panel,.hero-card,.money-card,.source-card,.budget-card,.goal-card,.home-account-card,.done-card,
+.quick-entry-card,.stage-card,.settings-row,.list-row,.event-row,.expense-cat,.quick-access-grid button{
+  transition:transform .22s cubic-bezier(.2,.75,.2,1),border-color .22s ease,background-color .22s ease,box-shadow .22s ease,opacity .22s ease;
+}
+button{transition:transform .16s ease,opacity .16s ease,background-color .2s ease,border-color .2s ease}
+button:active,.settings-row:active{transform:scale(.975)}
+@media(hover:hover) and (pointer:fine){
+  .panel:hover,.money-card:hover,.source-card:hover,.goal-card:hover,.home-account-card:hover,.done-card:hover,.quick-entry-card:hover,.stage-card:hover,.expense-cat:hover,.quick-access-grid button:hover{
+    transform:translateY(-2px);border-color:rgba(111,242,220,.22);box-shadow:0 16px 38px rgba(0,0,0,.22);
+  }
+  button:hover{filter:brightness(1.055)}
+}
+
+.overlay.show{animation:miaOverlayIn .18s ease both}
+.overlay.show .sheet{animation:miaSheetSpring .34s cubic-bezier(.16,.85,.25,1.05) both}
+@keyframes miaOverlayIn{from{background:rgba(0,8,8,0)}to{background:rgba(0,8,8,.64)}}
+@keyframes miaSheetSpring{from{transform:translateY(52px) scale(.985);opacity:0}to{transform:none;opacity:1}}
+
+.bottomnav .nav,.bottomnav .mia-action{transition:transform .22s cubic-bezier(.2,.8,.2,1),color .22s ease,background-color .22s ease}
+.bottomnav .nav.active{transform:translateY(-2px)}
+.bottomnav .nav.active .nav-icon{filter:drop-shadow(0 0 8px rgba(66,230,164,.42))}
+.mia-action b{animation:miaActionFloat 3.4s ease-in-out infinite}
+@keyframes miaActionFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+/* MIA identity */
+.mia-logo-mark{padding:0!important;background:none!important;box-shadow:none!important;overflow:visible}
+.mia-logo-svg{width:100%;height:100%;display:block;filter:drop-shadow(0 8px 18px rgba(57,215,232,.16))}
+.mia-logo-svg circle{transform-origin:36.5px 11.5px;animation:miaLogoDot 2.8s ease-in-out infinite}
+@keyframes miaLogoDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.72)}}
+.mia-home-signature{display:flex;align-items:center;gap:9px;margin:6px 2px 2px;opacity:.94}
+.mia-home-logo{width:34px;height:34px}
+.mia-home-signature b{font-size:15px;letter-spacing:.12em}.mia-home-signature small{display:block;color:var(--muted);font-size:7.5px;letter-spacing:.08em;margin-top:1px}
+.mia-settings-logo{padding:0!important;background:none!important}.mia-settings-logo .mia-logo-svg{width:56px;height:56px}
+
+/* Notification center */
+.notification-btn i{
+  display:grid!important;place-items:center;position:absolute!important;top:3px!important;right:2px!important;
+  min-width:18px!important;height:18px!important;padding:0 4px;border-radius:99px!important;
+  background:#ff6b73!important;color:white!important;font-style:normal;font-size:8px;font-weight:700;
+  border:2px solid #061817;box-shadow:0 4px 14px rgba(255,107,115,.28)!important;
+}
+.notification-btn i.hidden{display:none!important}
+.notification-sheet{max-height:82dvh}
+.notification-summary{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;margin-bottom:9px;border-radius:18px;border:1px solid rgba(66,230,164,.14);background:linear-gradient(135deg,rgba(66,230,164,.085),rgba(57,215,232,.04))}
+.notification-summary b{display:block;font-size:13px}.notification-summary small{display:block;color:var(--muted);font-size:8px;margin-top:3px}
+.notification-summary>span{width:38px;height:38px;border-radius:13px;display:grid;place-items:center;background:rgba(66,230,164,.09);color:var(--green)}
+.notification-summary>span svg{width:19px;height:19px}
+.notification-list{display:grid;gap:7px}
+.notification-item{--tone:66,230,164;width:100%;display:grid;grid-template-columns:42px 1fr 25px;gap:10px;align-items:center;text-align:right;padding:10px;border-radius:17px;border:1px solid rgba(var(--tone),.12);background:rgba(var(--tone),.035);color:var(--text)}
+.notification-item.tone-blue{--tone:74,168,255}.notification-item.tone-purple{--tone:155,124,255}.notification-item.tone-yellow{--tone:244,191,98}
+.notification-item-icon{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;background:rgba(var(--tone),.09);color:rgb(var(--tone))}
+.notification-item-icon svg{width:19px;height:19px}.notification-item b{display:block;font-size:11px}.notification-item small{display:block;color:var(--muted);font-size:8px;line-height:1.7;margin-top:3px}
+.notification-chevron{width:18px;height:18px;color:var(--muted)}
+.notification-reminder-link{display:grid;grid-template-columns:38px 1fr 20px;gap:9px;align-items:center;margin-top:10px;padding:11px;border-radius:17px;border:1px solid var(--line);background:rgba(255,255,255,.025);text-decoration:none;color:var(--text)}
+.notification-reminder-link>span:first-child{width:36px;height:36px;border-radius:12px;display:grid;place-items:center;background:rgba(57,215,232,.07);color:var(--cyan)}
+.notification-reminder-link span svg{width:17px;height:17px}.notification-reminder-link b{display:block;font-size:10px}.notification-reminder-link small{display:block;color:var(--muted);font-size:8px;line-height:1.65;margin-top:3px}
+
+/* Smart task list */
+.task-row{--cat-color:#9baaa7;--cat-rgb:155,170,167;grid-template-columns:38px 1fr 34px!important}
+.task-row-copy{min-width:0}.task-row-copy>b{display:block;font-size:11.5px;line-height:1.7;margin-top:4px}
+.task-row-meta{display:flex;align-items:center;gap:6px}.task-row-meta small{font-size:8px!important;color:var(--muted)}
+.task-cat-pill{height:20px;padding:0 7px;border-radius:8px;display:inline-flex;align-items:center;background:rgba(var(--cat-rgb),.09);color:var(--cat-color);font-size:7.5px;font-weight:650}
+.task-row .check-btn{border-color:rgba(var(--cat-rgb),.18);color:var(--cat-color);background:rgba(var(--cat-rgb),.055)}
+.home-task-card .task-row{min-height:66px}
+
+/* Horizontal scroll only where it adds value */
+.done-filter-scroll,.quick-chips,.work-tabs{
+  overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;overscroll-behavior-x:contain;scroll-snap-type:x proximity;
+}
+.done-filter-scroll::-webkit-scrollbar,.quick-chips::-webkit-scrollbar,.work-tabs::-webkit-scrollbar{display:none}
+.done-filter,.quick-chips button,.work-tabs button{scroll-snap-align:start}
+@media(max-width:430px){
+  .work-tabs{justify-content:flex-start!important}
+  .work-tabs button{flex:0 0 auto!important;min-width:88px}
+  .planner-main-tabs{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .planner-main-tabs::-webkit-scrollbar{display:none}
+  .planner-main-tabs button{min-width:92px}
+}
+@media(prefers-reduced-motion:reduce){
+  .mia-action b,.mia-logo-svg circle{animation:none!important}
+}

@@ -104,7 +104,7 @@ async function init(){
   await openDB();await seed();await load();await ensureDefaultThursdays();await load();
   $("todayLabel").textContent=pFull(new Date());
   renderAll();wireMode();
-  $("dbStatus").textContent="MIA v0.8.5 آماده است";
+  $("dbStatus").textContent="MIA v0.8.6 آماده است";
 }
 async function seed(){
   for(const [id,m] of Object.entries(ACCOUNT_META)){
@@ -150,7 +150,7 @@ function daysToNextPay(){
   const now=new Date(),pay=nextPersianPayDate(29);
   return Math.max(0,Math.ceil((pay-now)/86400000))
 }
-function renderAll(){renderHome();renderFinance();renderWork();renderPlanner();renderTasks();renderProjects();renderSettingsPage();hydrateIcons()}
+function renderAll(){renderHome();renderFinance();renderWork();renderPlanner();renderTasks();renderProjects();renderSettingsPage();renderNotificationBadge();hydrateIcons()}
 function renderHome(){
   const curr=account("current").balance;
   const days=daysToNextPay(),daily=curr/days;
@@ -314,8 +314,63 @@ async function setReelStageDone(stage){
   if(cur[stage])return toast("این مرحله قبلاً ثبت شده.");
   return toggleReelStage(stage)
 }
+function normalizeWorkTitle(input){
+  let q=norm(input)
+    .replace(/[.!؟?،]/g," ")
+    .replace(/\s+/g," ")
+    .trim();
+
+  q=q.replace(/ساعت\s*\d{1,2}(?::\d{1,2})?/g," ")
+     .replace(/امروز|فردا|پس ?فردا|چهار[\s‌]?شنبه|پنج[\s‌]?شنبه|سه[\s‌]?شنبه|دو[\s‌]?شنبه|یک[\s‌]?شنبه|شنبه|جمعه/g," ")
+     .replace(/\b(من|میخوام|می‌خوام|می خواهم|می‌خواهم|لازمه|قراره)\b/g," ")
+     .replace(/\b(باید)\b/g," ")
+     .replace(/\s+(رو|را)\s+/g," ")
+     .replace(/\s+/g," ")
+     .trim();
+
+  const brand=/هورسان/.test(q)?"هورسان":/هیرسا/.test(q)?"هیرسا":"";
+  const media=/ریلز/.test(q)?"ریلز":/ویدیو|فیلم/.test(q)?"ویدیو":"";
+
+  if(/تماس با/.test(q)){
+    const m=q.match(/تماس با\s+(.+?)(?:\s+(?:کنم|بگیرم|داشته باشم|بزنم))?$/);
+    if(m?.[1])return `تماس با ${m[1].trim()}`;
+  }
+  if(/زنگ/.test(q)){
+    let m=q.match(/(?:به\s+)?(.+?)\s+زنگ\s*(?:بزنم|بزن|بگیرم)?$/);
+    if(m?.[1])return `تماس با ${m[1].trim()}`;
+    m=q.match(/زنگ\s+(?:به\s+)?(.+?)(?:\s+(?:بزنم|بزن|بگیرم))?$/);
+    if(m?.[1])return `تماس با ${m[1].trim()}`;
+  }
+
+  if(media&&brand&&/فیلم ?برداری|ضبط/.test(q))return `فیلم‌برداری ${media} ${brand}`;
+  if(media&&brand&&/ادیت|تدوین|ویرایش|بزنم|بزن|بسازم|ساخت/.test(q))return `تدوین ${media} ${brand}`;
+  if(media&&brand&&/بارگذاری|آپلود|منتشر/.test(q))return `بارگذاری ${media} ${brand}`;
+
+  if(/لوگو/.test(q)){
+    const subject=brand?`لوگو ${brand}`:"لوگو";
+    if(/ویرایش|اصلاح|ادیت|تغییر/.test(q))return `ویرایش ${subject}`;
+    if(/طراحی|ساخت/.test(q))return `طراحی ${subject}`;
+  }
+
+  if(/(?:پیج|صفحه)/.test(q)&&brand&&/افتتاح|راه ?انداز|ایجاد|ساخت/.test(q))return `افتتاح پیج ${brand}`;
+
+  if(/سایت/.test(q)&&/اصلاح|ویرایش|ادیت|تغییر/.test(q)){
+    let target=q.replace(/اصلاح|ویرایش|ادیت|تغییر|کنم|کردم|شد|سایت/g," ").replace(/\s+/g," ").trim();
+    return target?`اصلاح سایت ${target}`:"اصلاح سایت";
+  }
+
+  q=q.replace(/\b(انجامش|انجام)\s*(?:بدم|دهم|کنم)?\b/g," ")
+     .replace(/\b(کردم|کرده شد|شد|کنم|بکنم|بدم|بدهم|بزنم|بزن|برم|بریم)\b/g," ")
+     .replace(/\s+/g," ")
+     .trim();
+
+  return q||String(input||"").trim();
+}
 function detectTaskCategory(text){
   const q=norm(text);
+
+  if(/(?:افتتاح|راه ?انداز|ایجاد|ساخت).*(?:پیج|صفحه).*هورسان|(?:پیج|صفحه).*هورسان.*(?:افتتاح|راه ?انداز|ایجاد|ساخت)/.test(q))return"hirsa";
+
   if(/هیرسا|hirsa/.test(q))return"hirsa";
   if(/هورسان|hoorsun|پنل خورشیدی|خورشیدی|سولار/.test(q))return"hoorsun";
   if(/فریلنس|freelance|مشتری|طراحی سایت|سایت مشتری|پروژه مشتری|کارفرمای شخصی/.test(q))return"freelance";
@@ -324,13 +379,14 @@ function detectTaskCategory(text){
 }
 function taskCategory(t){return t.category||detectTaskCategory(t.title||"")}
 function isCompletedPhrase(q){
-  return /انجام شد|انجام دادم|انجامش دادم|ویرایش شد|اصلاح شد|تمام شد|تموم شد|تکمیل شد|نهایی شد|فرستادم|ارسال شد|تحویل شد|آپلود شد|بارگذاری شد|منتشر شد|بسته شد|اوکی شد|حل شد|ثبت شد/.test(q)
+  return /انجام شد|انجام دادم|انجامش دادم|ویرایش شد|ویرایش کردم|اصلاح شد|اصلاح کردم|تمام شد|تموم شد|تکمیل شد|نهایی شد|فرستادم|ارسال شد|تحویل شد|آپلود شد|بارگذاری شد|منتشر شد|منتشر کردم|بسته شد|اوکی شد|حل شد|ثبت شد|افتتاح کردم|افتتاح شد|راه اندازی کردم|راه‌اندازی کردم|راه اندازی شد|راه‌اندازی شد|ایجاد کردم|ساختم|طراحی کردم/.test(q)
 }
-async function addCompletedTask(title){
-  const category=detectTaskCategory(title),ts=now();
-  await put("tasks",{id:ts,title,time:"انجام‌شده",dueISO:new Date(ts).toISOString(),done:true,doneAt:ts,category,createdAt:ts,completedVia:"quick"});
+async function addCompletedTask(rawTitle){
+  const title=normalizeWorkTitle(rawTitle);
+  const category=detectTaskCategory(`${rawTitle} ${title}`),ts=now();
+  await put("tasks",{id:ts,title,time:"انجام‌شده",dueISO:new Date(ts).toISOString(),done:true,doneAt:ts,category,createdAt:ts,completedVia:"quick",rawTitle});
   await load();renderAll();openPlannerTab("done");
-  toast(`در «${TASK_CATEGORY_META[category].name}» به انجام‌شده‌ها اضافه شد ✓`)
+  toast(`«${title}» در ${TASK_CATEGORY_META[category].name} ثبت شد ✓`)
 }
 
 function taskDate(t){return t.dueISO?new Date(t.dueISO):new Date(t.createdAt||now())}
@@ -380,7 +436,14 @@ function renderDoneArchive(done){
   hydrateIcons()
 }
 window.setDoneCategory=id=>{doneCategoryFilter=id;renderTasks()};
-function taskRow(t){return `<div class="list-row task-row"><button class="check-btn" onclick="toggleTask(${JSON.stringify(t.id)})"><span data-icon="check"></span></button><div><b>${esc(t.title)}</b><small>${pFull(taskDate(t))}</small></div><button class="mini-action danger" onclick="deleteTask(${JSON.stringify(t.id)})"><span data-icon="trash"></span></button></div>`}
+function taskRow(t){
+  const cat=taskCategory(t),m=TASK_CATEGORY_META[cat],d=taskDate(t),today=isSameDay(d,new Date());
+  return `<div class="list-row task-row cat-${cat}">
+    <button class="check-btn" onclick="toggleTask(${JSON.stringify(t.id)})"><span data-icon="check"></span></button>
+    <div class="task-row-copy"><div class="task-row-meta"><span class="task-cat-pill">${m.name}</span><small>${today?"امروز":pFull(d)}</small></div><b>${esc(t.title)}</b></div>
+    <button class="mini-action danger" onclick="deleteTask(${JSON.stringify(t.id)})"><span data-icon="trash"></span></button>
+  </div>`
+}
 function doneRow(t){
   const cat=taskCategory(t),m=TASK_CATEGORY_META[cat],d=new Date(t.doneAt||t.createdAt);
   return `<article class="done-card cat-${cat}">
@@ -397,10 +460,71 @@ function doneRow(t){
   </article>`
 }
 
+
+function buildMiaNotifications(){
+  const items=[],today=new Date();
+  const todayTasks=state.tasks.filter(t=>!t.done&&isSameDay(taskDate(t),today));
+  if(todayTasks.length){
+    items.push({kind:"tasks",icon:"briefcase",tone:"green",title:`${fa(todayTasks.length)} کار برای امروز`,text:todayTasks.slice(0,2).map(t=>t.title).join(" · ")})
+  }
+
+  const upcoming=state.events
+    .filter(e=>new Date(e.startISO)>=new Date()&&new Date(e.startISO)<=addDays(new Date(),2))
+    .sort((a,b)=>new Date(a.startISO)-new Date(b.startISO));
+  if(upcoming.length){
+    const e=upcoming[0],d=new Date(e.startISO);
+    items.push({kind:"calendar",icon:"calendar",tone:"blue",title:"برنامه نزدیک",text:`${e.title} · ${pFull(d)} ${new Intl.DateTimeFormat("fa-IR",{hour:"2-digit",minute:"2-digit"}).format(d)}`})
+  }
+
+  const wr=weekReels(),remain=Math.max(0,3-wr.length);
+  if(remain>0&&currentCycleReels().length<12){
+    const stage=state.hoorsunStage||{shoot:false,edit:false,upload:false};
+    const next=!stage.shoot?"فیلم‌برداری":!stage.edit?"تدوین":"بارگذاری";
+    items.push({kind:"work",icon:"camera",tone:"purple",title:`${fa(remain)} ریلز تا هدف هفتگی هورسان`,text:`مرحله بعدی ریلز فعلی: ${next}`})
+  }
+
+  const curr=account("current").balance;
+  if(curr>0&&curr<3_000_000){
+    items.push({kind:"finance",icon:"wallet",tone:"yellow",title:"موجودی جاری پایین است",text:`موجودی ثبت‌شده: ${toman(curr)}`})
+  }
+  return items
+}
+function renderNotificationBadge(){
+  const badge=$("notificationBadge");if(!badge)return;
+  const count=buildMiaNotifications().length;
+  badge.textContent=fa(count);
+  badge.classList.toggle("hidden",count===0)
+}
+function renderNotifications(){
+  const items=buildMiaNotifications(),list=$("notificationList"),summary=$("notificationSummary");
+  if(!list||!summary)return;
+  summary.innerHTML=items.length
+    ?`<div><b>${fa(items.length)} مورد نیاز به توجه</b><small>بر اساس کارها، برنامه‌ها، مالی و هورسان</small></div><span data-icon="bell"></span>`
+    :`<div><b>همه‌چیز مرتب است</b><small>فعلاً مورد فوری برای پیگیری نداری.</small></div><span data-icon="check"></span>`;
+  list.innerHTML=items.length?items.map(n=>`<button class="notification-item tone-${n.tone}" onclick="openNotificationTarget('${n.kind}')">
+    <span class="notification-item-icon" data-icon="${n.icon}"></span>
+    <div><b>${esc(n.title)}</b><small>${esc(n.text)}</small></div>
+    <span class="notification-chevron" data-icon="chevron-left"></span>
+  </button>`).join(""):empty("اعلان جدیدی نداری.");
+  hydrateIcons()
+}
+window.openNotifications=()=>{renderNotifications();openSheet("notificationSheet")};
+window.openNotificationTarget=kind=>{
+  closeSheet("notificationSheet");
+  if(kind==="tasks"){switchPage("planner");openPlannerTab("tasks")}
+  else if(kind==="calendar"){switchPage("planner");openPlannerTab("calendar")}
+  else if(kind==="work"){switchPage("work");openWorkTab("hoorsun")}
+  else if(kind==="finance"){switchPage("finance");openFinanceTab("overview")}
+};
+
 window.switchPage=id=>{
-  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$(id)?.classList.add("active");
+  const current=document.querySelector(".page.active"),next=$(id);
+  if(!next||current===next)return;
+  if(current){current.classList.add("page-leaving");setTimeout(()=>{current.classList.remove("active","page-leaving")},120)}
+  next.classList.add("active","page-entering");requestAnimationFrame(()=>requestAnimationFrame(()=>next.classList.remove("page-entering")));
   document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.page===id));
-  window.scrollTo({top:0,behavior:"smooth"});if(id==="finance")renderFinance();if(id==="work")renderWork();if(id==="planner")renderPlanner();hydrateIcons()
+  window.scrollTo({top:0,behavior:"smooth"});
+  if(id==="finance")renderFinance();if(id==="work")renderWork();if(id==="planner")renderPlanner();if(id==="settingsPage")renderSettingsPage();hydrateIcons()
 };
 window.openFinanceTab=id=>{
   document.querySelectorAll(".finance-pane").forEach(x=>x.classList.remove("active"));$("finance-"+id).classList.add("active");
@@ -455,7 +579,7 @@ function categoryFrom(q){
 function sourceFrom(q){
   q=norm(q);if(q.includes("هورسان"))return"hoorsun";if(q.includes("هیرسا"))return"hirsa";if(q.includes("اسنپ"))return"snapp";if(/فریلنس|سایت|مشتری/.test(q))return"freelance";return prefillIncomeSource||"other"
 }
-function isEventIntent(q){return /ساعت\s*\d|جلسه|قرار|ملاقات|مصاحبه|نوبت|وقت دکتر|تماس تلفنی|تماس با/.test(q)}
+function isEventIntent(q){return /ساعت\s*\d|جلسه|قرار|ملاقات|مصاحبه|نوبت|وقت دکتر|رزرو/.test(q)}
 function isIncomeIntent(q){
   if(/قسط|خرید|هزینه|پرداخت|واریز کردم|پرداخت کردم/.test(q))return false;
   return /حقوق|درآمد|دریافتی|دستمزد|فروش|واریزی|اومد|آمد|به حسابم/.test(q)
@@ -489,11 +613,14 @@ window.submitQuick=async()=>{
     if(isEventIntent(q)){
       await put("events",{id:now(),...dated,createdAt:now()});await load();renderAll();closeSheet("quickSheet");toast("برنامه زمان‌دار ثبت شد ✓");return
     }
-    await put("tasks",{id:now(),title:dated.title,time:pFull(new Date(dated.startISO)),dueISO:dated.startISO,done:false,category:detectTaskCategory(dated.title),createdAt:now()});
-    await load();renderAll();closeSheet("quickSheet");toast("کار در تاریخ موردنظر ثبت شد ✓");return
+    const smartTitle=normalizeWorkTitle(dated.title||raw);
+    await put("tasks",{id:now(),title:smartTitle,rawTitle:raw,time:pFull(new Date(dated.startISO)),dueISO:dated.startISO,done:false,category:detectTaskCategory(`${raw} ${smartTitle}`),createdAt:now()});
+    await load();renderAll();closeSheet("quickSheet");toast(`«${smartTitle}» به کارهای ${isSameDay(new Date(dated.startISO),new Date())?"امروز":"تاریخ انتخاب‌شده"} اضافه شد ✓`);return
   }
 
-  await put("tasks",{id:now(),title:raw,time:"امروز",dueISO:new Date().toISOString(),done:false,category:detectTaskCategory(raw),createdAt:now()});await load();renderAll();closeSheet("quickSheet");toast("به فهرست کارهای باز اضافه شد ✓")
+  const smartTitle=normalizeWorkTitle(raw);
+  await put("tasks",{id:now(),title:smartTitle,rawTitle:raw,time:"امروز",dueISO:new Date().toISOString(),done:false,category:detectTaskCategory(`${raw} ${smartTitle}`),createdAt:now()});
+  await load();renderAll();closeSheet("quickSheet");toast(`«${smartTitle}» به کارهای امروز اضافه شد ✓`)
 };
 
 async function addExpense(amount,category,note){
@@ -595,7 +722,7 @@ window.deleteEvent=async id=>{
   await remove("events",id);await load();renderAll();toast("برنامه حذف شد")
 };
 window.openTaskSheet=()=>{$("taskTitle").value="";$("taskDateText").textContent=pFull(planner.selected);openSheet("taskSheet");setTimeout(()=>$("taskTitle").focus(),120)};
-window.saveTask=async()=>{const title=$("taskTitle").value.trim();if(!title)return;const d=new Date(planner.selected);d.setHours(9,0,0,0);await put("tasks",{id:now(),title,time:pFull(d),dueISO:d.toISOString(),done:false,category:detectTaskCategory(title),createdAt:now()});await load();renderAll();closeSheet("taskSheet");toast("کار به فهرست باز اضافه شد ✓")};
+window.saveTask=async()=>{const rawTitle=$("taskTitle").value.trim();if(!rawTitle)return;const title=normalizeWorkTitle(rawTitle),d=new Date(planner.selected);d.setHours(9,0,0,0);await put("tasks",{id:now(),title,rawTitle,time:pFull(d),dueISO:d.toISOString(),done:false,category:detectTaskCategory(`${rawTitle} ${title}`),createdAt:now()});await load();renderAll();closeSheet("taskSheet");toast(`«${title}» به فهرست کارها اضافه شد ✓`)};
 window.toggleTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;const category=t.category||detectTaskCategory(t.title);await put("tasks",{...t,category,done:true,doneAt:now()});await load();renderAll();toast(`انجام شد · در دسته «${TASK_CATEGORY_META[category].name}» ثبت شد ✓`)};
 window.reopenTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;await put("tasks",{...t,done:false,doneAt:null});await load();renderAll();openPlannerTab("tasks");toast("کار دوباره به فهرست باز برگشت")};
 window.deleteTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;if(!confirm(`«${t.title}» حذف شود؟`))return;await remove("tasks",id);await load();renderAll();toast("کار حذف شد")};
@@ -613,7 +740,7 @@ function renderSettingsPage(){
 }
 
 window.exportData=async()=>{
-  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.5",...state};
+  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.6",...state};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`MIA-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 };
 async function undoLast(){

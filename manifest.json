@@ -1,7 +1,7 @@
 {
-  "name": "MIA — دستیار مالی و کاری ایمان",
+  "name": "MIA — دستیار شخصی ایمان",
   "short_name": "MIA",
-  "description": "MIA v0.8.5 — بازبینی کامل UX، متن‌ها، مالی، Quick Entry و کارهای انجام‌شده",
+  "description": "MIA v0.8.6 — Smart Tasks, Notifications & Motion",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

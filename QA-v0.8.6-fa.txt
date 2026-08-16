@@ -1,0 +1,28 @@
+MIA v0.8.6 — QA
+
+✓ پیج هورسان رو افتتاح کردم
+  → افتتاح پیج هورسان
+  → انجام‌شده
+  → دسته هیرسا
+
+✓ امروز باید ویدیو هورسان رو ادیت کنم
+  → تدوین ویدیو هورسان
+  → کار امروز
+  → دسته هورسان
+
+✓ امروز باید ویدیو هیرسا رو باید بزنم
+  → تدوین ویدیو هیرسا
+  → کار امروز
+  → دسته هیرسا
+
+✓ تماس با فلانی
+  → تماس با فلانی
+  → Task امروز
+  → فقط با ساعت/جلسه/قرار تبدیل به Event می‌شود
+
+✓ Bell opens Notification Center
+✓ Dynamic notification badge
+✓ Whole app vertical scroll
+✓ Horizontal scroll only for Done filters / Quick chips / narrow tabs
+✓ Page/Sheet/Nav motion
+✓ Minimal MIA logo
