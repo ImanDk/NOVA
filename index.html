@@ -100,7 +100,7 @@
     <small id="daysToPay">—</small>
   </div>
 
-  <div class="segmented" id="financeTabs">
+  <div class="segmented mia-subtabs" id="financeTabs">
     <button class="active" data-ftab="overview" onclick="openFinanceTab('overview')">نمای کلی</button>
     <button data-ftab="expenses" onclick="openFinanceTab('expenses')">هزینه‌ها</button>
     <button data-ftab="income" onclick="openFinanceTab('income')">درآمد</button>
@@ -149,7 +149,7 @@
 <!-- WORK -->
 <section class="page" id="work">
   <div class="page-title"><div><h1>کار</h1><p>پیگیری کار، خروجی و درآمد</p></div></div>
-  <div class="segmented work-tabs">
+  <div class="segmented work-tabs mia-subtabs">
     <button class="active" data-wtab="hoorsun" onclick="openWorkTab('hoorsun')">هورسان</button>
     <button data-wtab="hirsa" onclick="openWorkTab('hirsa')">هیرسا</button>
     <button data-wtab="snapp" onclick="openWorkTab('snapp')">اسنپ</button>
@@ -241,7 +241,7 @@
       <div class="week-labels"><span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span>ج</span></div>
       <div class="month-grid" id="monthGrid"></div>
     </div>
-    <div class="section-head"><div><h2 id="selectedDate"></h2><small class="selected-day-help">کارها و برنامه‌های همین روز</small></div><button onclick="openEventSheet()">+ برنامه</button></div>
+    <div class="section-head"><div><h2 id="selectedDate"></h2><small class="selected-day-help" id="selectedDayHelp">کارها و برنامه‌های همین روز</small></div><button onclick="openEventSheet()">+ برنامه</button></div>
     <div class="panel timeline" id="dayEvents"></div>
   </div>
 
@@ -296,7 +296,7 @@
 
   <div class="settings-group-title">درباره MIA</div>
   <div class="panel settings-list">
-    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v0.8.9</b><small>دستیار مالی، کاری و برنامه‌ریزی شخصی ایمان</small></div></div>
+    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v0.9.0</b><small>دستیار مالی، کاری و برنامه‌ریزی شخصی ایمان</small></div></div>
   </div>
 </section>
 

@@ -104,7 +104,7 @@ async function init(){
   await openDB();await seed();await load();await ensureDefaultThursdays();await load();
   $("todayLabel").textContent=pFull(new Date());
   renderAll();installInteractionGuards();wireMode();
-  $("dbStatus").textContent="MIA v0.8.9 آماده است";
+  $("dbStatus").textContent="MIA v0.9.0 آماده است";
 }
 async function seed(){
   for(const [id,m] of Object.entries(ACCOUNT_META)){
@@ -419,7 +419,7 @@ window.openHirsaDone=()=>{
 function renderPlanner(){
   $("monthTitle").textContent=pMonthTitle(planner.anchor);$("selectedDate").textContent=pFull(planner.selected);
   const {cells}=monthCells(planner.anchor),ap=pParts(planner.anchor),today=new Date();
-  $("monthGrid").innerHTML=cells.map(d=>{const pp=pParts(d),inside=pp.month===ap.month&&pp.year===ap.year,evCount=eventsFor(d).length,taskCount=tasksForDate(d,true).length,has=evCount+taskCount>0;return `<button class="day-cell ${inside?"":"muted"} ${isSameDay(d,today)?"today":""} ${isSameDay(d,planner.selected)?"selected":""}" onclick="selectDate('${d.toISOString()}')"><span>${pDayNum(d)}</span>${has?`<i class="day-indicator ${taskCount&&evCount?"mixed":taskCount?"task":"event"}"></i>`:""}</button>`}).join("");
+  $("monthGrid").innerHTML=cells.map(d=>{const pp=pParts(d),inside=pp.month===ap.month&&pp.year===ap.year,evCount=eventsFor(d).length,taskCount=tasksForDate(d,true).length,has=evCount+taskCount>0,key=localDateKey(d);return `<button class="day-cell ${inside?"":"muted"} ${isSameDay(d,today)?"today":""} ${isSameDay(d,planner.selected)?"selected":""}" data-day-key="${key}" onclick="handleDayClick('${d.toISOString()}','${key}')"><span>${pDayNum(d)}</span>${has?`<i class="day-indicator ${taskCount&&evCount?"mixed":taskCount?"task":"event"}"></i>`:""}</button>`}).join("");
   const ev=eventsFor(planner.selected),tasks=tasksForDate(planner.selected,true);
   const rows=[...ev.map(e=>({date:new Date(e.startISO),html:eventRow(e)})),...tasks.map(t=>({date:taskDate(t),html:dayTaskRow(t)}))].sort((a,b)=>a.date-b.date);
   $("dayEvents").innerHTML=rows.length?rows.map(x=>x.html).join(""):empty("برای این روز کار یا برنامه‌ای ثبت نشده.");hydrateIcons()
@@ -581,21 +581,131 @@ window.switchPage=id=>{
     next.classList.remove("motion-forward","motion-back");
   },330);
 };
-window.openFinanceTab=id=>{
-  document.querySelectorAll(".finance-pane").forEach(x=>x.classList.remove("active"));$("finance-"+id).classList.add("active");
-  document.querySelectorAll("#financeTabs button").forEach(b=>b.classList.toggle("active",b.dataset.ftab===id))
+const SUBTAB_MOTION_MS=250;
+const SUBTAB_ORDER={
+  finance:{overview:0,expenses:1,income:2,budget:3},
+  work:{hoorsun:0,hirsa:1,snapp:2,freelance:3}
 };
-window.openWorkTab=id=>{
-  document.querySelectorAll(".work-pane").forEach(x=>x.classList.remove("active"));$("work-"+id).classList.add("active");
-  document.querySelectorAll(".work-tabs button").forEach(b=>b.classList.toggle("active",b.dataset.wtab===id))
-};
+const subtabTokens={finance:0,work:0};
+
+function switchSubPane(group,id){
+  const paneClass=group==="finance"?"finance-pane":"work-pane";
+  const prefix=group==="finance"?"finance-":"work-";
+  const tabSelector=group==="finance"?"#financeTabs button":".work-tabs button";
+  const dataKey=group==="finance"?"ftab":"wtab";
+  const current=document.querySelector(`.${paneClass}.active`);
+  const next=$(prefix+id);
+  if(!next||current===next)return;
+
+  const currentId=current?.id?.replace(prefix,"")||id;
+  const from=SUBTAB_ORDER[group]?.[currentId]??0;
+  const to=SUBTAB_ORDER[group]?.[id]??from;
+  const forward=to>from;
+  const token=++subtabTokens[group];
+
+  document.querySelectorAll(tabSelector).forEach(b=>{
+    const active=b.dataset[dataKey]===id;
+    b.classList.toggle("active",active);
+    if(active){
+      b.classList.remove("tab-pop");
+      void b.offsetWidth;
+      b.classList.add("tab-pop");
+    }
+  });
+
+  if(current){
+    current.classList.remove("pane-entering","pane-forward","pane-back");
+    current.classList.add("pane-leaving",forward?"pane-forward":"pane-back");
+  }
+
+  setTimeout(()=>{
+    if(token!==subtabTokens[group])return;
+    if(current)current.classList.remove("active","pane-leaving","pane-forward","pane-back");
+
+    next.classList.remove("pane-leaving","pane-entering","pane-forward","pane-back");
+    next.classList.add("active","pane-entering",forward?"pane-forward":"pane-back");
+
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      next.classList.remove("pane-entering");
+      hydrateIcons();
+    }));
+
+    setTimeout(()=>{
+      if(token!==subtabTokens[group])return;
+      next.classList.remove("pane-forward","pane-back");
+    },SUBTAB_MOTION_MS);
+  },85);
+}
+
+window.openFinanceTab=id=>switchSubPane("finance",id);
+window.openWorkTab=id=>switchSubPane("work",id);
+
 window.openPlannerTab=id=>{
   document.querySelectorAll(".planner-pane").forEach(x=>x.classList.remove("active"));$("planner-"+id).classList.add("active");
   document.querySelectorAll(".planner-main-tabs button").forEach(b=>b.classList.toggle("active",b.dataset.ptab===id));
   if(id==="done"||id==="tasks")renderTasks()
 };
-window.selectDate=iso=>{planner.selected=new Date(iso);planner.anchor=new Date(iso);renderPlanner()};
-window.shiftMonth=dir=>{const {start,end}=monthCells(planner.anchor);planner.anchor=dir>0?addDays(end,1):addDays(start,-1);planner.selected=planner.anchor;renderPlanner()};
+
+let dayTapState={key:"",at:0};
+
+function setDayDetailsCollapsed(collapsed){
+  const detail=$("dayEvents"),help=$("selectedDayHelp");
+  if(!detail)return;
+  detail.classList.toggle("day-events-awaiting",collapsed);
+  detail.classList.remove("day-events-reveal");
+  if(help)help.textContent=collapsed
+    ?"برای نمایش کارها و برنامه‌های این روز، دوبار روی روز بزن."
+    :"کارها و برنامه‌های همین روز";
+}
+
+function revealSelectedDayDetails(){
+  const detail=$("dayEvents"),help=$("selectedDayHelp");
+  if(!detail)return;
+  detail.classList.remove("day-events-awaiting","day-events-reveal");
+  void detail.offsetWidth;
+  detail.classList.add("day-events-reveal");
+  if(help)help.textContent="کارها و برنامه‌های همین روز";
+  setTimeout(()=>detail.classList.remove("day-events-reveal"),520);
+
+  const selected=document.querySelector(".day-cell.selected");
+  if(selected){
+    selected.classList.remove("day-opened");
+    void selected.offsetWidth;
+    selected.classList.add("day-opened");
+  }
+  setTimeout(()=>detail.scrollIntoView({behavior:"smooth",block:"nearest"}),80);
+}
+
+window.handleDayClick=(iso,key)=>{
+  const t=Date.now();
+  const doubleTap=dayTapState.key===key&&(t-dayTapState.at)<430;
+  dayTapState={key,at:t};
+
+  planner.selected=new Date(iso);
+  planner.anchor=new Date(iso);
+  renderPlanner();
+
+  requestAnimationFrame(()=>{
+    if(doubleTap)revealSelectedDayDetails();
+    else setDayDetailsCollapsed(true);
+  });
+};
+
+window.selectDate=iso=>{
+  planner.selected=new Date(iso);
+  planner.anchor=new Date(iso);
+  renderPlanner();
+  requestAnimationFrame(()=>setDayDetailsCollapsed(false));
+};
+
+window.shiftMonth=dir=>{
+  const {start,end}=monthCells(planner.anchor);
+  planner.anchor=dir>0?addDays(end,1):addDays(start,-1);
+  planner.selected=planner.anchor;
+  dayTapState={key:"",at:0};
+  renderPlanner();
+  requestAnimationFrame(()=>setDayDetailsCollapsed(false));
+};
 
 const SHEET_MOTION_MS=300;
 let sheetFocusTimer=null;
@@ -841,7 +951,7 @@ function renderSettingsPage(){
 }
 
 window.exportData=async()=>{
-  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.9",...state};
+  const data={exportedAt:new Date().toISOString(),version:"MIA 0.9.0",...state};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`MIA-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 };
 async function undoLast(){

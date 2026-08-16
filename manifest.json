@@ -1,7 +1,7 @@
 {
   "name": "MIA — دستیار شخصی ایمان",
   "short_name": "MIA",
-  "description": "MIA v0.8.9 — Hirsa completed work in Work tab",
+  "description": "MIA v0.9.0 — Finance/Work tab motion and calendar double-tap reveal",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
