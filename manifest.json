@@ -1,7 +1,7 @@
 {
   "name": "MIA — دستیار شخصی ایمان",
   "short_name": "MIA",
-  "description": "MIA v0.9.0 — Finance/Work tab motion and calendar double-tap reveal",
+  "description": "MIA v0.9.1 — Calendar day popup and overdue red alerts",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

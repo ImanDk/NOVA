@@ -1,5 +1,5 @@
 
-const CACHE="mia-v090-tab-calendar-motion";
+const CACHE="mia-v091-calendar-day-popup";
 const FILES=["./","./index.html","./styles.css","./app.js","./db.js","./planner.js","./manifest.json","./icon-192.png","./icon-512.png","./setup-ios.html"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
