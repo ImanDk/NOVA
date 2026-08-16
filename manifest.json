@@ -1,7 +1,7 @@
 {
-  "name": "MIA — دستیار شخصی ایمان",
+  "name": "MIA — دستیار Iman Dk",
   "short_name": "MIA",
-  "description": "MIA v0.9.3 — Planner tab hover and completed-task deletion",
+  "description": "MIA v1.1.0 Final Hardened — atomic finance, conflict-safe encrypted backup, modular core",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -1,0 +1,22 @@
+import fs from "node:fs";
+const read=n=>fs.readFileSync(new URL(`./${n}`,import.meta.url),"utf8");
+const html=read("index.html"),app=read("app.js"),db=read("db.js"),sync=read("sync.js"),finance=read("finance-store.js"),sw=read("sw.js");
+const failures=[];const ok=(cond,msg)=>{if(!cond)failures.push(msg)};
+ok(!/onclick\s*=/.test(html),"inline onclick remains in index.html");
+ok(!/\.onclick\s*=/.test(app),"DOM onclick property remains in app.js");
+ok(!/onclick\s*=/.test(app),"dynamic inline onclick attribute remains in app.js");
+ok(/script-src 'self'/.test(html)&&!/script-src[^;]*unsafe-inline/.test(html),"script CSP still permits unsafe-inline");
+ok(/recordExpenseAtomic/.test(app)&&/recordTransferAtomic/.test(app)&&/reconcileAccountAtomic/.test(app),"app is not using atomic finance module");
+ok(/db\.transaction\(\["accounts","transactions"\],"readwrite"\)/.test(finance),"atomic multi-store finance transaction missing");
+ok(/dirty:true/.test(sync)&&/startup-pending/.test(sync),"persistent dirty sync missing");
+ok(/CLOUD_CONFLICT/.test(sync)&&/lastRemoteSha/.test(sync),"cloud conflict detection missing");
+ok(/AES-GCM/.test(sync),"encrypted cloud backup missing");
+ok(/DB_NAME="nova_core_v06",DB_VERSION=3/.test(db),"database identity changed");
+ok(/crypto\.randomUUID/.test(read("core.js")),"UUID generator missing");
+ok(/pruneLogs/.test(db)&&/maxErrors=100/.test(db),"log pruning missing");
+ok(/styles-features\.css\?v=110/.test(html),"modular feature stylesheet missing");
+ok(/\?v=110/.test(html)&&/mia-v110-final-hardened/.test(sw),"asset versioning missing");
+const ids=[...html.matchAll(/id="([^"]+)"/g)].map(m=>m[1]);
+const dup=ids.filter((x,i)=>ids.indexOf(x)!==i);ok(dup.length===0,`duplicate HTML ids: ${[...new Set(dup)].join(",")}`);
+if(failures.length){console.error("MIA QA FAILED\n- "+failures.join("\n- "));process.exit(1)}
+console.log("MIA v1.1.0 QA PASSED — all final hardening checks passed.");

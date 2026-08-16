@@ -11,6 +11,7 @@ export function pMonthTitle(date){return faMonth.format(date)}
 export function pDayNum(date){return faDay.format(date)}
 export function pWeekday(date){return faWeekday.format(date)}
 export function addDays(date,n){const d=new Date(date);d.setDate(d.getDate()+n);return d}
+export function startOfDay(date){const d=new Date(date);d.setHours(0,0,0,0);return d}
 export function startOfWeek(date){const d=new Date(date);d.setHours(12,0,0,0);const off=(d.getDay()+1)%7;d.setDate(d.getDate()-off);return d}
 export function startOfPersianMonth(date){
   const target=pParts(date),d=new Date(date);d.setHours(12,0,0,0);

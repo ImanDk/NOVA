@@ -1,0 +1,24 @@
+MIA v1.1.0 Final Hardened — QA Summary
+
+موارد بررسی‌شده و پاس‌شده:
+- Syntax تمام ماژول‌های JavaScript با node --check
+- qa.mjs نهایی
+- عدم وجود onclick attribute در HTML و Templateهای JavaScript
+- CSP بدون unsafe-inline در script-src
+- وجود Handler برای تمام data-actionهای ثابت و پویا
+- نبود Duplicate HTML ID
+- حفظ IndexedDB: nova_core_v06 / Version 3
+- استفاده از Atomic Finance Module برای Expense / Income / Transfer / Allocation / Reconcile / Undo Expense
+- Persistent Cloud Dirty State
+- Retry در Startup / Online / Background / PageHide
+- GitHub Remote Conflict Detection با lastRemoteSha
+- AES-GCM encrypted backup و حذف Cloud secrets از Snapshot
+- crypto.randomUUID برای رکوردهای جدید
+- Log pruning: 100 app-error + 3 pre-cloud-restore
+- Service Worker cache version mia-v110-final-hardened
+- Asset query version ?v=110
+- جداسازی CSS به styles.css و styles-features.css با حفظ ترتیب Cascade
+- ماژول‌های جدید: core.js / actions.js / finance-store.js / self-test.js
+
+نکته:
+این QA ساختاری و Static است. اتصال واقعی GitHub API نیازمند Token شخصی کاربر است و در محیط ساخت بدون Token اجرا نشده است.

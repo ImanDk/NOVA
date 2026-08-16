@@ -1,0 +1,32 @@
+راه‌اندازی GitHub Cloud Backup برای MIA v1.1.0 Final Hardened
+
+حساب MIA:
+Iman Dk
+
+GitHub پیش‌فرض:
+Owner: ImanDk
+Repository: NOVA
+Backup branch: mia-backup
+Backup file: mia-data/iman-dk.mia.json
+
+فعال‌سازی یک‌باره:
+1) در GitHub یک Fine-grained Personal Access Token بساز.
+2) Repository access را فقط روی NOVA محدود کن.
+3) Repository permission > Contents را روی Read and write بگذار.
+4) در MIA وارد تنظیمات > پشتیبان‌گیری خودکار GitHub شو.
+5) Token را Paste کن و «اتصال و فعال‌سازی بکاپ خودکار» را بزن.
+6) Recovery Key را Copy کن و خارج از MIA نگه دار.
+
+رفتار نسخه 1.1:
+- تمام داده‌ها ابتدا در IndexedDB دستگاه ذخیره می‌شوند.
+- هر تغییر، Cloud Dirty State پایدار ایجاد می‌کند؛ پس اگر برنامه قبل از Sync بسته شود، تغییر از بین نمی‌رود و اجرای بعدی دوباره برای بکاپ تلاش می‌کند.
+- Sync عادی حداکثر هر 5 دقیقه انجام می‌شود و هنگام Background/PageHide یک تلاش فوری نیز انجام می‌شود.
+- اگر فایل GitHub از آخرین نسخه شناخته‌شده تغییر کرده باشد، MIA آن را خودکار overwrite نمی‌کند و Conflict اعلام می‌کند.
+- در Conflict دو انتخاب امن داری: Restore از GitHub یا Manual Sync و تأیید صریح بازنویسی Remote.
+
+امنیت:
+- اطلاعات Backup با AES-GCM-256 رمزگذاری می‌شوند.
+- GitHub Token و Recovery Key داخل Snapshot یا فایل Backup آپلود نمی‌شوند.
+- Token فقط در IndexedDB همان دستگاه نگهداری می‌شود.
+- Script CSP اجازه inline JavaScript نمی‌دهد و UI از Event Delegation استفاده می‌کند.
+- GitHub API توسط Service Worker Cache نمی‌شود.

@@ -1,6 +1,54 @@
+const CACHE="mia-v110-final-hardened";
+const FILES=[
+  "./","./index.html","./styles.css?v=110","./styles-features.css?v=110","./app.js?v=110","./db.js?v=110","./planner.js?v=110",
+  "./sync.js?v=110","./core.js?v=110","./actions.js?v=110","./finance-store.js?v=110","./self-test.js?v=110",
+  "./boot.js?v=110","./manifest.json","./icon-192.png","./icon-512.png","./setup-ios.html"
+];
 
-const CACHE="mia-v093-planner-hover-done-delete";
-const FILES=["./","./index.html","./styles.css","./app.js","./db.js","./planner.js","./manifest.json","./icon-192.png","./icon-512.png","./setup-ios.html"];
-self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));
-self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWith(fetch(e.request).then(r=>{const c=r.clone();caches.open(CACHE).then(x=>x.put(e.request,c));return r}).catch(()=>caches.match(e.request).then(r=>r||caches.match("./index.html"))))});
+self.addEventListener("install",event=>{
+  event.waitUntil(
+    caches.open(CACHE)
+      .then(cache=>cache.addAll(FILES))
+      .then(()=>self.skipWaiting())
+  )
+});
+
+self.addEventListener("activate",event=>{
+  event.waitUntil(
+    caches.keys()
+      .then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))
+      .then(()=>self.clients.claim())
+  )
+});
+
+self.addEventListener("fetch",event=>{
+  const req=event.request;
+  if(req.method!=="GET")return;
+
+  const url=new URL(req.url);
+
+  // Never intercept/cache authenticated APIs or third-party resources.
+  if(url.origin!==self.location.origin)return;
+
+  if(req.mode==="navigate"){
+    event.respondWith(
+      fetch(req)
+        .then(response=>response)
+        .catch(()=>caches.match("./index.html"))
+    );
+    return
+  }
+
+  event.respondWith(
+    caches.match(req).then(cached=>{
+      const network=fetch(req).then(response=>{
+        if(response?.ok){
+          const copy=response.clone();
+          caches.open(CACHE).then(cache=>cache.put(req,copy)).catch(()=>{});
+        }
+        return response
+      });
+      return cached||network
+    })
+  )
+});

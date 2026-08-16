@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#041312">
 <meta name="color-scheme" content="dark">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self' https://api.github.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MIA">
@@ -14,9 +16,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=110">
+<link rel="stylesheet" href="styles-features.css?v=110">
 </head>
 <body>
+<div class="app-health-banner" id="appHealthBanner" hidden>
+  <div><b id="appHealthTitle">MIA با خطا روبه‌رو شد</b><small id="appHealthMessage">بخش اصلی برنامه همچنان در دسترس است.</small></div>
+  <button data-action="retryAppStart()">تلاش دوباره</button>
+</div>
 <div class="bg-orb bg-a"></div><div class="bg-orb bg-b"></div>
 <main class="app">
 <header class="topbar">
@@ -32,11 +39,11 @@
         fill="none" stroke="#03110f" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="36.5" cy="11.5" r="3.1" fill="#03110f"/>
 </svg></div>
-    <div><b>MIA</b><small id="todayLabel">دستیار مالی و کاری ایمان</small></div>
+    <div><b>MIA</b><small id="todayLabel">دستیار مالی و کاری · Iman Dk</small></div>
   </div>
   <div class="top-actions">
-    <button class="icon-btn notification-btn" onclick="openNotifications()" aria-label="اعلان‌های MIA"><span data-icon="bell"></span><i id="notificationBadge">۰</i></button>
-    <button class="icon-btn" onclick="openSettings()" aria-label="تنظیمات"><span data-icon="settings"></span></button>
+    <button class="icon-btn notification-btn" data-action="openNotifications()" aria-label="اعلان‌های MIA"><span data-icon="bell"></span><i id="notificationBadge">۰</i></button>
+    <button class="icon-btn" data-action="openSettings()" aria-label="تنظیمات"><span data-icon="settings"></span></button>
   </div>
 </header>
 
@@ -44,19 +51,19 @@
 <section class="page active" id="home">
   <div class="hello home-welcome home-welcome-compact"><span>سلام ایمان 👋</span></div>
 
-  <div class="section-head home-today-head"><h2>کارهای امروز</h2><button onclick="switchPage('planner');openPlannerTab('tasks')">مشاهده همه</button></div>
+  <div class="section-head home-today-head"><h2>کارهای امروز</h2><button data-action="switchPage(&#x27;planner&#x27;);openPlannerTab(&#x27;tasks&#x27;)">مشاهده همه</button></div>
   <div class="panel compact-list home-task-card home-task-card-top" id="homeTasks"></div>
 
-  <button class="quick-entry-card" onclick="openQuick()">
+  <button class="quick-entry-card" data-action="openQuick()">
     <span class="quick-entry-icon" data-icon="plus"></span>
     <div><b>ثبت سریع با MIA</b><small>هزینه، درآمد، کار یا برنامه را بنویس؛ MIA نوع آن را تشخیص می‌دهد</small></div>
     <span class="quick-arrow" data-icon="chevron-left"></span>
   </button>
 
-  <div class="section-head"><h2>چهار حساب من</h2><button onclick="switchPage('finance')">نمایش جزئیات</button></div>
+  <div class="section-head"><h2>چهار حساب من</h2><button data-action="switchPage(&#x27;finance&#x27;)">نمایش جزئیات</button></div>
   <div class="home-account-grid" id="homeAccounts"></div>
 
-  <div class="section-head"><h2>درآمد این ماه</h2><button onclick="switchPage('finance');openFinanceTab('income')">گزارش کامل</button></div>
+  <div class="section-head"><h2>درآمد این ماه</h2><button data-action="switchPage(&#x27;finance&#x27;);openFinanceTab(&#x27;income&#x27;)">گزارش کامل</button></div>
   <div class="panel home-income-card">
     <div class="home-income-copy">
       <strong id="homeIncomeTotal">۰ تومان</strong>
@@ -66,7 +73,7 @@
     <div class="donut home-donut" id="homeIncomeDonut"><span id="homeIncomeDonutText">۰</span></div>
   </div>
 
-  <div class="section-head compact"><h2>هورسان</h2><button onclick="switchPage('work');openWorkTab('hoorsun')">جزئیات</button></div>
+  <div class="section-head compact"><h2>هورسان</h2><button data-action="switchPage(&#x27;work&#x27;);openWorkTab(&#x27;hoorsun&#x27;)">جزئیات</button></div>
   <div class="panel home-hoorsun-card home-hoorsun-card-wide">
     <div class="home-hoorsun-top">
       <div class="ring mini-ring" id="homeReelRing"><strong id="homeReels">۰ / ۱۲</strong><small>ریلز</small></div>
@@ -83,16 +90,16 @@
 
   <div class="section-head"><h2>دسترسی سریع</h2></div>
   <div class="quick-access-grid">
-    <button onclick="openQuick('expense')"><span data-icon="wallet"></span><small>ثبت هزینه</small></button>
-    <button onclick="openQuick('income')"><span data-icon="arrow-up"></span><small>ثبت درآمد</small></button>
-    <button onclick="switchPage('finance');openFinanceTab('overview')"><span data-icon="target"></span><small>اهداف مالی</small></button>
-    <button onclick="switchPage('planner')"><span data-icon="calendar"></span><small>برنامه امروز</small></button>
+    <button data-action="openQuick(&#x27;expense&#x27;)"><span data-icon="wallet"></span><small>ثبت هزینه</small></button>
+    <button data-action="openQuick(&#x27;income&#x27;)"><span data-icon="arrow-up"></span><small>ثبت درآمد</small></button>
+    <button data-action="switchPage(&#x27;finance&#x27;);openFinanceTab(&#x27;overview&#x27;)"><span data-icon="target"></span><small>اهداف مالی</small></button>
+    <button data-action="switchPage(&#x27;planner&#x27;)"><span data-icon="calendar"></span><small>برنامه امروز</small></button>
   </div>
 </section>
 
 <!-- FINANCE -->
 <section class="page" id="finance">
-  <div class="page-title"><div><h1>مالی</h1><p>موجودی، بودجه و جریان درآمد در یک نگاه</p></div><button class="round-add" onclick="openQuick('expense')" aria-label="ثبت مالی"><span data-icon="plus"></span></button></div>
+  <div class="page-title"><div><h1>مالی</h1><p>موجودی، بودجه و جریان درآمد در یک نگاه</p></div><button class="round-add" data-action="openQuick(&#x27;expense&#x27;)" aria-label="ثبت مالی"><span data-icon="plus"></span></button></div>
 
   <div class="finance-hero panel">
     <span>قابل خرج از حساب جاری</span>
@@ -101,10 +108,10 @@
   </div>
 
   <div class="segmented mia-subtabs" id="financeTabs">
-    <button class="active" data-ftab="overview" onclick="openFinanceTab('overview')">نمای کلی</button>
-    <button data-ftab="expenses" onclick="openFinanceTab('expenses')">هزینه‌ها</button>
-    <button data-ftab="income" onclick="openFinanceTab('income')">درآمد</button>
-    <button data-ftab="budget" onclick="openFinanceTab('budget')">بودجه</button>
+    <button class="active" data-ftab="overview" data-action="openFinanceTab(&#x27;overview&#x27;)">نمای کلی</button>
+    <button data-ftab="expenses" data-action="openFinanceTab(&#x27;expenses&#x27;)">هزینه‌ها</button>
+    <button data-ftab="income" data-action="openFinanceTab(&#x27;income&#x27;)">درآمد</button>
+    <button data-ftab="budget" data-action="openFinanceTab(&#x27;budget&#x27;)">بودجه</button>
   </div>
 
   <div class="finance-pane active" id="finance-overview">
@@ -134,7 +141,7 @@
   </div>
 
   <div class="finance-pane" id="finance-income">
-    <div class="section-head"><h2>منابع درآمد</h2><button onclick="openQuick('income')">+ درآمد</button></div>
+    <div class="section-head"><h2>منابع درآمد</h2><button data-action="openQuick(&#x27;income&#x27;)">+ درآمد</button></div>
     <div class="source-grid" id="incomeSourceCards"></div>
     <div class="section-head"><h2>دریافت‌های اخیر</h2></div>
     <div class="panel transaction-list" id="incomeList"></div>
@@ -150,10 +157,10 @@
 <section class="page" id="work">
   <div class="page-title"><div><h1>کار</h1><p>پیگیری کار، خروجی و درآمد</p></div></div>
   <div class="segmented work-tabs mia-subtabs">
-    <button class="active" data-wtab="hoorsun" onclick="openWorkTab('hoorsun')">هورسان</button>
-    <button data-wtab="hirsa" onclick="openWorkTab('hirsa')">هیرسا</button>
-    <button data-wtab="snapp" onclick="openWorkTab('snapp')">اسنپ</button>
-    <button data-wtab="freelance" onclick="openWorkTab('freelance')">فریلنس</button>
+    <button class="active" data-wtab="hoorsun" data-action="openWorkTab(&#x27;hoorsun&#x27;)">هورسان</button>
+    <button data-wtab="hirsa" data-action="openWorkTab(&#x27;hirsa&#x27;)">هیرسا</button>
+    <button data-wtab="snapp" data-action="openWorkTab(&#x27;snapp&#x27;)">اسنپ</button>
+    <button data-wtab="freelance" data-action="openWorkTab(&#x27;freelance&#x27;)">فریلنس</button>
   </div>
 
   <div class="work-pane active" id="work-hoorsun">
@@ -163,17 +170,17 @@
     </div>
     <div class="section-head work-section-head"><h2>ریلز بعدی</h2><span id="stageProgressText">۰ از ۳ مرحله</span></div>
     <div class="reel-stages panel" id="reelStages">
-      <button class="stage-card" id="stageShoot" onclick="toggleReelStage('shoot')">
+      <button class="stage-card" id="stageShoot" data-action="toggleReelStage(&#x27;shoot&#x27;)">
         <span class="stage-icon" data-icon="camera"></span>
         <div><b>فیلم‌برداری</b><small>مرحله ۱</small></div>
         <span class="stage-check" data-icon="check"></span>
       </button>
-      <button class="stage-card" id="stageEdit" onclick="toggleReelStage('edit')">
+      <button class="stage-card" id="stageEdit" data-action="toggleReelStage(&#x27;edit&#x27;)">
         <span class="stage-icon" data-icon="scissors"></span>
         <div><b>تدوین</b><small>مرحله ۲</small></div>
         <span class="stage-check" data-icon="check"></span>
       </button>
-      <button class="stage-card" id="stageUpload" onclick="toggleReelStage('upload')">
+      <button class="stage-card" id="stageUpload" data-action="toggleReelStage(&#x27;upload&#x27;)">
         <span class="stage-icon" data-icon="upload"></span>
         <div><b>بارگذاری</b><small>مرحله ۳</small></div>
         <span class="stage-check" data-icon="check"></span>
@@ -192,11 +199,11 @@
   <div class="work-pane" id="work-hirsa">
     <div class="source-hero panel"><span>حقوق ثابت ماهانه</span><strong>۲۵ میلیون تومان</strong><small>پرداخت معمول: روزهای ۲۸ تا ۳۰</small></div>
     <div class="info-card warning"><b>درآمد پروژه‌ای هیرسا</b><p>تا زمان واریز واقعی، در بودجه و پول قابل خرج محاسبه نمی‌شود.</p></div>
-    <button class="primary" onclick="openQuick('income','hirsa')">ثبت دریافت حقوق هیرسا</button>
+    <button class="primary" data-action="openQuick(&#x27;income&#x27;,&#x27;hirsa&#x27;)">ثبت دریافت حقوق هیرسا</button>
 
     <div class="section-head hirsa-done-head">
       <div><h2>کارهای انجام‌شده هیرسا</h2><small>آخرین فعالیت‌های ثبت‌شده</small></div>
-      <button onclick="openHirsaDone()">مشاهده همه</button>
+      <button data-action="openHirsaDone()">مشاهده همه</button>
     </div>
 
     <div class="hirsa-done-summary panel">
@@ -215,29 +222,29 @@
 
   <div class="work-pane" id="work-snapp">
     <div class="source-hero panel"><span>میانگین درآمد روزانه</span><strong>۸۵۰ هزار تومان</strong><small>منبع درآمد پشتیبان</small></div>
-    <button class="primary" onclick="openQuick('income','snapp')">ثبت درآمد اسنپ</button>
+    <button class="primary" data-action="openQuick(&#x27;income&#x27;,&#x27;snapp&#x27;)">ثبت درآمد اسنپ</button>
     <div class="section-head"><h2>این ماه</h2></div><div class="panel" id="snappMonth"></div>
   </div>
 
   <div class="work-pane" id="work-freelance">
     <div class="source-hero panel"><span>تمرکز فریلنس</span><strong>طراحی سایت + تولید محتوا</strong><small>هدف: افزایش ارزش اقتصادی هر ساعت</small></div>
-    <button class="primary" onclick="openProjectSheet()">+ پروژه فریلنس جدید</button>
+    <button class="primary" data-action="openProjectSheet()">+ پروژه فریلنس جدید</button>
     <div class="section-head"><h2>پروژه‌ها</h2></div><div id="projectsList"></div>
   </div>
 </section>
 
 <!-- PLANNER -->
 <section class="page" id="planner">
-  <div class="page-title"><div><h1>برنامه</h1><p>تقویم شمسی، کارها و برنامه‌های زمان‌دار</p></div><button class="round-add" onclick="openEventSheet()" aria-label="افزودن برنامه"><span data-icon="plus"></span></button></div>
+  <div class="page-title"><div><h1>برنامه</h1><p>تقویم شمسی، کارها و برنامه‌های زمان‌دار</p></div><button class="round-add" data-action="openEventSheet()" aria-label="افزودن برنامه"><span data-icon="plus"></span></button></div>
   <div class="segmented planner-main-tabs mia-subtabs planner-subtabs">
-    <button class="active" data-ptab="calendar" onclick="openPlannerTab('calendar')">تقویم</button>
-    <button data-ptab="tasks" onclick="openPlannerTab('tasks')">کارهای باز</button>
-    <button data-ptab="done" onclick="openPlannerTab('done')">انجام‌شده</button>
+    <button class="active" data-ptab="calendar" data-action="openPlannerTab(&#x27;calendar&#x27;)">تقویم</button>
+    <button data-ptab="tasks" data-action="openPlannerTab(&#x27;tasks&#x27;)">کارهای باز</button>
+    <button data-ptab="done" data-action="openPlannerTab(&#x27;done&#x27;)">انجام‌شده</button>
   </div>
 
   <div class="planner-pane active" id="planner-calendar">
     <div class="panel calendar-card">
-      <div class="calendar-head"><button onclick="shiftMonth(-1)">‹</button><b id="monthTitle"></b><button onclick="shiftMonth(1)">›</button></div>
+      <div class="calendar-head"><button data-action="shiftMonth(-1)">‹</button><b id="monthTitle"></b><button data-action="shiftMonth(1)">›</button></div>
       <div class="week-labels"><span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span>ج</span></div>
       <div class="month-grid" id="monthGrid"></div>
     </div>
@@ -247,15 +254,15 @@
         <small class="selected-day-help" id="selectedDayHelp">کارها و برنامه‌های همین روز</small>
       </div>
       <div class="selected-day-actions">
-        <button class="calendar-add-task" onclick="addTaskForSelectedDay()"><span data-icon="plus"></span> کار</button>
-        <button class="calendar-add-event" onclick="openEventSheet()"><span data-icon="calendar"></span> برنامه</button>
+        <button class="calendar-add-task" data-action="addTaskForSelectedDay()"><span data-icon="plus"></span> کار</button>
+        <button class="calendar-add-event" data-action="openEventSheet()"><span data-icon="calendar"></span> برنامه</button>
       </div>
     </div>
     <div class="panel timeline day-inline-list" id="dayEvents"></div>
   </div>
 
   <div class="planner-pane" id="planner-tasks">
-    <button class="primary" onclick="openTaskSheet()">+ کار جدید</button>
+    <button class="primary" data-action="openTaskSheet()">+ کار جدید</button>
     <div class="panel compact-list" id="taskList"></div>
   </div>
   <div class="planner-pane" id="planner-done">
@@ -271,41 +278,64 @@
 <section class="page" id="settingsPage">
   <div class="page-title settings-title">
     <div><h1>تنظیمات</h1><p>حساب، داده‌ها و شخصی‌سازی MIA</p></div>
-    <button class="round-add" onclick="switchPage('home')" aria-label="بازگشت"><span data-icon="chevron-right"></span></button>
+    <button class="round-add" data-action="switchPage(&#x27;home&#x27;)" aria-label="بازگشت"><span data-icon="chevron-right"></span></button>
   </div>
 
   <div class="settings-profile panel">
     <div class="settings-avatar mia-settings-logo"><svg class="mia-logo-svg" viewBox="0 0 48 48" aria-hidden="true">
   <defs>
-    <linearGradient id="miaG" x1="7" y1="7" x2="41" y2="41" gradientUnits="userSpaceOnUse">
+    <linearGradient id="miaGSettings" x1="7" y1="7" x2="41" y2="41" gradientUnits="userSpaceOnUse">
       <stop stop-color="#42e6a4"/><stop offset="1" stop-color="#39d7e8"/>
     </linearGradient>
   </defs>
-  <rect x="3.5" y="3.5" width="41" height="41" rx="13.5" fill="url(#miaG)"/>
+  <rect x="3.5" y="3.5" width="41" height="41" rx="13.5" fill="url(#miaGSettings)"/>
   <path d="M12.5 32V16.2c0-1.4 1.7-2.1 2.7-1.1L24 24l8.8-8.9c1-1 2.7-.3 2.7 1.1V32"
         fill="none" stroke="#03110f" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>
   <circle cx="36.5" cy="11.5" r="3.1" fill="#03110f"/>
 </svg></div>
-    <div><b>ایمان</b><small>دستیار شخصی مالی و کاری</small></div>
+    <div><b>Iman Dk</b><small>حساب اصلی MIA · دستیار شخصی مالی و کاری</small></div>
     <div class="settings-balance"><span>کل موجودی ثبت‌شده</span><strong id="settingsTotalBalance">۰ تومان</strong></div>
+  </div>
+
+  <div class="settings-group-title">حساب و همگام‌سازی</div>
+  <div class="panel cloud-account-card">
+    <div class="cloud-account-avatar"><span data-icon="user"></span></div>
+    <div class="cloud-account-copy">
+      <b>Iman Dk</b>
+      <small id="cloudAccountStatus">ذخیره محلی فعال · GitHub هنوز متصل نیست</small>
+      <span id="cloudLastSync">آخرین همگام‌سازی: —</span>
+    </div>
+    <i class="cloud-status-dot" id="cloudStatusDot"></i>
+  </div>
+  <div class="panel settings-list">
+    <button class="settings-row" data-action="openCloudSyncSettings()">
+      <span class="settings-row-icon cloud-icon" data-icon="shield"></span>
+      <div><b>پشتیبان‌گیری خودکار GitHub</b><small>بکاپ رمزگذاری‌شده روی شاخه جداگانه mia-backup</small></div>
+      <span data-icon="chevron-left"></span>
+    </button>
+    <button class="settings-row" data-action="runHealthCheck(true)">
+      <span class="settings-row-icon health-icon" data-icon="check"></span>
+      <div><b>بررسی سلامت MIA</b><small id="appHealthText">در حال بررسی ساختار برنامه…</small></div>
+      <span data-icon="chevron-left"></span>
+    </button>
   </div>
 
   <div class="settings-group-title">مالی و حساب‌ها</div>
   <div class="panel settings-list">
-    <button class="settings-row" onclick="switchPage('finance')"><span class="settings-row-icon account-current" data-icon="wallet"></span><div><b>چهار حساب مالی</b><small>جاری، تعهدات، ذخیره امن و اهداف</small></div><span data-icon="chevron-left"></span></button>
-    <button class="settings-row" onclick="openQuick('income')"><span class="settings-row-icon" data-icon="arrow-up"></span><div><b>ثبت درآمد جدید</b><small>ثبت درآمد و پیشنهاد تقسیم هوشمند</small></div><span data-icon="chevron-left"></span></button>
+    <button class="settings-row" data-action="switchPage(&#x27;finance&#x27;)"><span class="settings-row-icon account-current" data-icon="wallet"></span><div><b>چهار حساب مالی</b><small>جاری، تعهدات، ذخیره امن و اهداف</small></div><span data-icon="chevron-left"></span></button>
+    <button class="settings-row" data-action="openQuick(&#x27;income&#x27;)"><span class="settings-row-icon" data-icon="arrow-up"></span><div><b>ثبت درآمد جدید</b><small>ثبت درآمد و پیشنهاد تقسیم هوشمند</small></div><span data-icon="chevron-left"></span></button>
   </div>
 
   <div class="settings-group-title">داده‌ها و ابزارها</div>
   <div class="panel settings-list">
     <a class="settings-row" href="setup-ios.html"><span class="settings-row-icon" data-icon="smartphone"></span><div><b>Action Button و یادآوری شبانه</b><small>ثبت سریع MIA + یادآوری روزانه ساعت ۰۰:۰۰ از iPhone</small></div><span data-icon="chevron-left"></span></a>
-    <button class="settings-row" onclick="exportData()"><span class="settings-row-icon blue-icon" data-icon="download"></span><div><b>دریافت فایل پشتیبان</b><small>ذخیره اطلاعات MIA در قالب JSON</small></div><span data-icon="chevron-left"></span></button>
-    <button class="settings-row" onclick="resetHoorsunCycle()"><span class="settings-row-icon purple-icon" data-icon="rotate-ccw"></span><div><b>شروع چرخه جدید هورسان</b><small>آرشیو چرخه فعلی و شروع ۱۲ ریلز جدید</small></div><span data-icon="chevron-left"></span></button>
+    <button class="settings-row" data-action="exportData()"><span class="settings-row-icon blue-icon" data-icon="download"></span><div><b>دریافت فایل پشتیبان</b><small>ذخیره اطلاعات MIA در قالب JSON</small></div><span data-icon="chevron-left"></span></button>
+    <button class="settings-row" data-action="resetHoorsunCycle()"><span class="settings-row-icon purple-icon" data-icon="rotate-ccw"></span><div><b>شروع چرخه جدید هورسان</b><small>آرشیو چرخه فعلی و شروع ۱۲ ریلز جدید</small></div><span data-icon="chevron-left"></span></button>
   </div>
 
   <div class="settings-group-title">درباره MIA</div>
   <div class="panel settings-list">
-    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v0.9.3</b><small>دستیار مالی، کاری و برنامه‌ریزی شخصی ایمان</small></div></div>
+    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v1.1.0</b><small>نسخه پایدار دستیار شخصی Iman Dk</small></div></div>
   </div>
 </section>
 
@@ -314,22 +344,77 @@
 
 <!-- BOTTOM NAV -->
 <nav class="bottomnav">
-  <button class="nav active" data-page="home" onclick="switchPage('home')"><span class="nav-icon" data-icon="home"></span><small>خانه</small></button>
-  <button class="nav" data-page="finance" onclick="switchPage('finance')"><span class="nav-icon" data-icon="wallet"></span><small>مالی</small></button>
-  <button class="mia-action" onclick="openQuick()"><b><span data-icon="plus"></span></b><small>MIA</small></button>
-  <button class="nav" data-page="work" onclick="switchPage('work')"><span class="nav-icon" data-icon="briefcase"></span><small>کار</small></button>
-  <button class="nav" data-page="planner" onclick="switchPage('planner')"><span class="nav-icon" data-icon="calendar"></span><small>برنامه</small></button>
+  <button class="nav active" data-page="home" data-action="switchPage(&#x27;home&#x27;)"><span class="nav-icon" data-icon="home"></span><small>خانه</small></button>
+  <button class="nav" data-page="finance" data-action="switchPage(&#x27;finance&#x27;)"><span class="nav-icon" data-icon="wallet"></span><small>مالی</small></button>
+  <button class="mia-action" data-action="openQuick()"><b><span data-icon="plus"></span></b><small>MIA</small></button>
+  <button class="nav" data-page="work" data-action="switchPage(&#x27;work&#x27;)"><span class="nav-icon" data-icon="briefcase"></span><small>کار</small></button>
+  <button class="nav" data-page="planner" data-action="switchPage(&#x27;planner&#x27;)"><span class="nav-icon" data-icon="calendar"></span><small>برنامه</small></button>
 </nav>
 
 
 
+<!-- CLOUD SYNC -->
+<div class="overlay" id="cloudSyncSheet" data-action="closeOverlay(event,&#x27;cloudSyncSheet&#x27;)">
+  <div class="sheet cloud-sync-sheet" data-action="stopPropagation">
+    <div class="handle"></div>
+    <div class="sheet-title">
+      <div><span class="accent">حساب Iman Dk</span><h2>همگام‌سازی امن GitHub</h2></div>
+      <button data-action="closeSheet(&#x27;cloudSyncSheet&#x27;)">×</button>
+    </div>
+
+    <div class="cloud-sync-hero">
+      <div class="cloud-sync-state">
+        <i class="cloud-status-dot" id="cloudSheetStatusDot"></i>
+        <div><b id="cloudSheetStatus">ذخیره محلی فعال</b><small id="cloudSheetLastSync">هنوز بکاپ ابری ثبت نشده.</small></div>
+      </div>
+      <span class="cloud-encrypted-badge"><span data-icon="shield"></span> AES‑GCM</span>
+    </div>
+
+    <div class="cloud-fields">
+      <label><span>GitHub Username</span><input id="cloudOwnerInput" value="ImanDk" autocomplete="off" spellcheck="false"></label>
+      <label><span>Repository</span><input id="cloudRepoInput" value="NOVA" autocomplete="off" spellcheck="false"></label>
+      <label><span>Backup Branch</span><input id="cloudBranchInput" value="mia-backup" autocomplete="off" spellcheck="false"></label>
+      <label class="cloud-field-wide"><span>Backup File</span><input id="cloudPathInput" value="mia-data/iman-dk.mia.json" autocomplete="off" spellcheck="false"></label>
+      <label class="cloud-field-wide"><span>Fine-grained GitHub Token</span><input id="cloudTokenInput" type="password" placeholder="توکن را فقط بار اول وارد کن" autocomplete="new-password" spellcheck="false"></label>
+    </div>
+
+    <div class="cloud-security-note">
+      <span data-icon="shield"></span>
+      <div><b>اطلاعات مالی به‌صورت خام آپلود نمی‌شود.</b><small>فایل بکاپ قبل از ارسال با کلید بازیابی اختصاصی Iman Dk رمزگذاری می‌شود. توکن GitHub نیز داخل فایل بکاپ قرار نمی‌گیرد.</small></div>
+    </div>
+
+    <button class="primary big" id="cloudConnectBtn" data-action="connectCloudGitHub()">اتصال و فعال‌سازی بکاپ خودکار</button>
+
+    <div class="cloud-action-grid">
+      <button class="ghost" data-action="manualCloudSync()"><span data-icon="upload"></span><b>همگام‌سازی الان</b><small>ارسال آخرین اطلاعات</small></button>
+      <button class="ghost" data-action="restoreCloudBackup()"><span data-icon="download"></span><b>بازیابی از GitHub</b><small>جایگزینی اطلاعات محلی</small></button>
+    </div>
+
+    <div class="cloud-recovery-card">
+      <div><b>کلید بازیابی</b><small>برای انتقال MIA به دستگاه دیگر، این کلید را جداگانه نگه دار.</small></div>
+      <div class="cloud-recovery-row">
+        <code id="cloudRecoveryKey">••••••••••••••••••••••••</code>
+        <button data-action="copyCloudRecoveryKey()">کپی</button>
+      </div>
+      <input id="cloudRecoveryInput" placeholder="برای بازیابی روی دستگاه جدید، کلید را اینجا وارد کن" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="cloud-footer-actions">
+      <button class="ghost cloud-toggle-btn" id="cloudAutoToggle" data-action="toggleCloudAutoSync()">بکاپ خودکار: خاموش</button>
+      <button class="danger-outline" data-action="disconnectCloudSync()">قطع اتصال GitHub</button>
+    </div>
+
+    <p class="cloud-footnote">برای اتصال، توکن GitHub باید فقط به Repository «NOVA» و دسترسی Contents: Read and write محدود شود.</p>
+  </div>
+</div>
+
 <!-- NOTIFICATIONS -->
-<div class="overlay" id="notificationSheet" onclick="closeOverlay(event,'notificationSheet')">
-  <div class="sheet notification-sheet" onclick="event.stopPropagation()">
+<div class="overlay" id="notificationSheet" data-action="closeOverlay(event,&#x27;notificationSheet&#x27;)">
+  <div class="sheet notification-sheet" data-action="stopPropagation">
     <div class="handle"></div>
     <div class="sheet-title">
       <div><span class="accent">مرکز اعلان‌های MIA</span><h2>چه چیزی نیاز به توجه دارد؟</h2></div>
-      <button onclick="closeSheet('notificationSheet')">×</button>
+      <button data-action="closeSheet(&#x27;notificationSheet&#x27;)">×</button>
     </div>
     <div class="notification-summary" id="notificationSummary"></div>
     <div class="notification-list" id="notificationList"></div>
@@ -342,84 +427,84 @@
 </div>
 
 <!-- QUICK ENTRY -->
-<div class="overlay" id="quickSheet" onclick="closeOverlay(event,'quickSheet')">
-  <div class="sheet quick-sheet" onclick="event.stopPropagation()">
+<div class="overlay" id="quickSheet" data-action="closeOverlay(event,&#x27;quickSheet&#x27;)">
+  <div class="sheet quick-sheet" data-action="stopPropagation">
     <div class="handle"></div>
-    <div class="sheet-title"><div><span class="accent">ثبت سریع MIA</span><h2>چه چیزی ثبت کنیم؟</h2></div><button onclick="closeSheet('quickSheet')">×</button></div>
+    <div class="sheet-title"><div><span class="accent">ثبت سریع MIA</span><h2>چه چیزی ثبت کنیم؟</h2></div><button data-action="closeSheet(&#x27;quickSheet&#x27;)">×</button></div>
     <div class="quick-chips">
-      <button onclick="prefillQuick('140 سیگار')">سیگار</button>
-      <button onclick="prefillQuick('1.5 رستوران کیمیا')">کیمیا</button>
-      <button onclick="prefillQuick('750 بنزین')">بنزین</button>
-      <button onclick="prefillQuick('فیلم‌برداری هورسان انجام شد')">فیلم‌برداری هورسان</button>
+      <button data-action="prefillQuick(&#x27;140 سیگار&#x27;)">سیگار</button>
+      <button data-action="prefillQuick(&#x27;1.5 رستوران کیمیا&#x27;)">کیمیا</button>
+      <button data-action="prefillQuick(&#x27;750 بنزین&#x27;)">بنزین</button>
+      <button data-action="prefillQuick(&#x27;فیلم‌برداری هورسان انجام شد&#x27;)">فیلم‌برداری هورسان</button>
     </div>
     <textarea id="quickInput" rows="3" placeholder="مثلاً: امروز باید ویدیو هورسان رو ادیت کنم&#10;یا: پیج هورسان رو افتتاح کردم"></textarea>
-    <button class="primary big" onclick="submitQuick()">ثبت با MIA</button>
+    <button class="primary big" data-action="submitQuick()">ثبت با MIA</button>
     <p class="quick-help">جمله را طبیعی بنویس؛ MIA عنوان کار، دسته، زمان و انجام‌شده یا باز بودن آن را خودش تشخیص می‌دهد.</p>
   </div>
 </div>
 
 <!-- AMOUNT SHEET -->
-<div class="overlay" id="amountSheet" onclick="closeOverlay(event,'amountSheet')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="handle"></div><div class="sheet-title"><div><span class="accent">ثبت هزینه</span><h2 id="amountCategoryTitle">مبلغ را وارد کن</h2></div><button onclick="closeSheet('amountSheet')">×</button></div>
+<div class="overlay" id="amountSheet" data-action="closeOverlay(event,&#x27;amountSheet&#x27;)">
+  <div class="sheet" data-action="stopPropagation">
+    <div class="handle"></div><div class="sheet-title"><div><span class="accent">ثبت هزینه</span><h2 id="amountCategoryTitle">مبلغ را وارد کن</h2></div><button data-action="closeSheet(&#x27;amountSheet&#x27;)">×</button></div>
     <div class="money-input"><input id="amountInput" inputmode="decimal" placeholder="مثلاً 140 یا 1.5"><span>تومان</span></div>
-    <button class="primary big" onclick="saveQuickExpense()">ثبت هزینه</button>
+    <button class="primary big" data-action="saveQuickExpense()">ثبت هزینه</button>
   </div>
 </div>
 
 <!-- ALLOCATION -->
-<div class="overlay" id="allocationSheet" onclick="closeOverlay(event,'allocationSheet')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="handle"></div><div class="sheet-title"><div><span class="accent">تقسیم درآمد</span><h2 id="allocationTitle">پیشنهاد MIA</h2></div><button onclick="closeSheet('allocationSheet')">×</button></div>
+<div class="overlay" id="allocationSheet" data-action="closeOverlay(event,&#x27;allocationSheet&#x27;)">
+  <div class="sheet" data-action="stopPropagation">
+    <div class="handle"></div><div class="sheet-title"><div><span class="accent">تقسیم درآمد</span><h2 id="allocationTitle">پیشنهاد MIA</h2></div><button data-action="closeSheet(&#x27;allocationSheet&#x27;)">×</button></div>
     <p class="muted">MIA مبلغ و درصد پیشنهادی را حساب می‌کند. انتقال واقعی را خودت بین چهار بانک انجام بده؛ بعد دکمه «انتقال‌ها را انجام دادم» را بزن.</p>
     <div id="allocationRows"></div>
-    <button class="primary big" onclick="confirmAllocation()">انتقال‌ها را انجام دادم</button>
-    <button class="ghost big" onclick="closeSheet('allocationSheet')">بعداً انجام می‌دهم</button>
+    <button class="primary big" data-action="confirmAllocation()">انتقال‌ها را انجام دادم</button>
+    <button class="ghost big" data-action="closeSheet(&#x27;allocationSheet&#x27;)">بعداً انجام می‌دهم</button>
   </div>
 </div>
 
 <!-- ACCOUNT -->
-<div class="overlay" id="accountSheet" onclick="closeOverlay(event,'accountSheet')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="handle"></div><div class="sheet-title"><div><span class="accent">تطبیق با بانک</span><h2 id="accountSheetTitle"></h2></div><button onclick="closeSheet('accountSheet')">×</button></div>
+<div class="overlay" id="accountSheet" data-action="closeOverlay(event,&#x27;accountSheet&#x27;)">
+  <div class="sheet" data-action="stopPropagation">
+    <div class="handle"></div><div class="sheet-title"><div><span class="accent">تطبیق با بانک</span><h2 id="accountSheetTitle"></h2></div><button data-action="closeSheet(&#x27;accountSheet&#x27;)">×</button></div>
     <label class="field-label">نام بانک / کارت این حساب</label>
     <input class="text-input" id="accountBankInput" placeholder="مثلاً ملت، پاسارگاد، سامان...">
     <label class="field-label account-balance-label">موجودی واقعی بانک</label>
     <div class="money-input"><input id="accountBalanceInput" inputmode="decimal"><span>تومان</span></div>
     <p class="muted account-note">این عدد فقط موجودی همین حساب را اصلاح می‌کند و درآمد یا هزینه جدید محسوب نمی‌شود.</p>
-    <button class="primary big" onclick="saveAccountBalance()">ذخیره و تطبیق با بانک</button>
+    <button class="primary big" data-action="saveAccountBalance()">ذخیره و تطبیق با بانک</button>
   </div>
 </div>
 
 <!-- EVENT -->
-<div class="overlay" id="eventSheet" onclick="closeOverlay(event,'eventSheet')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="handle"></div><div class="sheet-title"><div><span class="accent" id="eventModeLabel">برنامه جدید</span><h2 id="eventDateText"></h2></div><button onclick="closeSheet('eventSheet')">×</button></div>
+<div class="overlay" id="eventSheet" data-action="closeOverlay(event,&#x27;eventSheet&#x27;)">
+  <div class="sheet" data-action="stopPropagation">
+    <div class="handle"></div><div class="sheet-title"><div><span class="accent" id="eventModeLabel">برنامه جدید</span><h2 id="eventDateText"></h2></div><button data-action="closeSheet(&#x27;eventSheet&#x27;)">×</button></div>
     <input class="text-input" id="eventTitle" placeholder="عنوان برنامه">
     <div class="two-col"><input class="text-input" id="eventTime" type="time" value="10:00"><input class="text-input" id="eventDuration" inputmode="numeric" value="60" placeholder="مدت"></div>
-    <button class="primary big" id="eventSaveBtn" onclick="saveEvent()">ثبت در تقویم</button>
+    <button class="primary big" id="eventSaveBtn" data-action="saveEvent()">ثبت در تقویم</button>
   </div>
 </div>
 
 <!-- TASK -->
-<div class="overlay" id="taskSheet" onclick="closeOverlay(event,'taskSheet')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="handle"></div><div class="sheet-title"><div><span class="accent">کار جدید</span><h2>چه کاری باید انجام شود؟</h2><small class="sheet-date" id="taskDateText"></small></div><button onclick="closeSheet('taskSheet')">×</button></div>
+<div class="overlay" id="taskSheet" data-action="closeOverlay(event,&#x27;taskSheet&#x27;)">
+  <div class="sheet" data-action="stopPropagation">
+    <div class="handle"></div><div class="sheet-title"><div><span class="accent">کار جدید</span><h2>چه کاری باید انجام شود؟</h2><small class="sheet-date" id="taskDateText"></small></div><button data-action="closeSheet(&#x27;taskSheet&#x27;)">×</button></div>
     <input class="text-input" id="taskTitle" placeholder="عنوان کار">
-    <button class="primary big" onclick="saveTask()">افزودن کار</button>
+    <button class="primary big" data-action="saveTask()">افزودن کار</button>
   </div>
 </div>
 
 <!-- PROJECT -->
-<div class="overlay" id="projectSheet" onclick="closeOverlay(event,'projectSheet')">
-  <div class="sheet" onclick="event.stopPropagation()">
-    <div class="handle"></div><div class="sheet-title"><div><span class="accent">پروژه فریلنس</span><h2>پروژه جدید</h2></div><button onclick="closeSheet('projectSheet')">×</button></div>
+<div class="overlay" id="projectSheet" data-action="closeOverlay(event,&#x27;projectSheet&#x27;)">
+  <div class="sheet" data-action="stopPropagation">
+    <div class="handle"></div><div class="sheet-title"><div><span class="accent">پروژه فریلنس</span><h2>پروژه جدید</h2></div><button data-action="closeSheet(&#x27;projectSheet&#x27;)">×</button></div>
     <input class="text-input" id="projectTitle" placeholder="نام پروژه">
     <input class="text-input" id="projectValue" inputmode="decimal" placeholder="ارزش پروژه، مثلاً 25 میلیون">
-    <button class="primary big" onclick="saveProject()">ثبت پروژه</button>
+    <button class="primary big" data-action="saveProject()">ثبت پروژه</button>
   </div>
 </div>
 
 <div class="toast" id="toast"><span id="toastText"></span><button id="toastAction"></button></div>
-<script type="module" src="app.js"></script><script>if("serviceWorker" in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});</script>
+<script type="module" src="app.js?v=110"></script><script type="module" src="boot.js?v=110"></script>
 </body></html>

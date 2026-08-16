@@ -1,6 +1,18 @@
 
-import {openDB,all,get,put,remove} from "./db.js";
-import {pFull,pMonthTitle,pDayNum,pParts,pKey,monthCells,addDays,parseFaDigits,parseNaturalEvent,startOfWeek} from "./planner.js";
+import {openDB,all,get,put,putQuiet,remove,snapshotDB,databaseHealth,pruneLogs} from "./db.js?v=110";
+import {pFull,pMonthTitle,pDayNum,pParts,pKey,monthCells,addDays,parseFaDigits,parseNaturalEvent,startOfWeek,startOfDay} from "./planner.js?v=110";
+import {
+  initCloudSync,getCloudSyncStatus,connectGitHub,syncNow,
+  restoreFromGitHub,getRecoveryKey,setCloudAutoEnabled,disconnectCloud
+} from "./sync.js?v=110";
+
+import {PROFILE_ID,PROFILE_NAME,newId,escapeHtml,actionExpr} from "./core.js?v=110";
+import {installActionDelegation} from "./actions.js?v=110";
+import {runPureSelfTests} from "./self-test.js?v=110";
+import {recordExpenseAtomic,recordIncomeAtomic,confirmAllocationAtomic,recordTransferAtomic,reconcileAccountAtomic,undoExpenseAtomic} from "./finance-store.js?v=110";
+
+const APP_VERSION="1.1.0";
+
 
 const $=id=>document.getElementById(id);
 const fa=n=>new Intl.NumberFormat("fa-IR",{maximumFractionDigits:1}).format(Number(n)||0);
@@ -13,7 +25,7 @@ const toman=n=>{
   else value=fa(n);
   return `${value} تومان`;
 };
-const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const esc=escapeHtml;
 const norm=s=>parseFaDigits(String(s||"")).replace(/ي/g,"ی").replace(/ك/g,"ک").replace(/[٬,]/g,"").replace(/\s+/g," ").trim().toLowerCase();
 const now=()=>Date.now();
 const monthKey=d=>{const p=pParts(d);return `${p.year}-${p.month}`};
@@ -96,37 +108,198 @@ const EXPENSE_CATS=[
   ["personal","خرید شخصی","shopping-bag",2_000_000],
   ["other","سایر","more-horizontal",1_000_000],
 ];
-let state={tasks:[],events:[],projects:[],projectTasks:[],transactions:[],accounts:[],reels:[],budgets:[],allocations:[],goals:[],hoorsunStage:{shoot:false,edit:false,upload:false}};
+let state={tasks:[],events:[],projects:[],projectTasks:[],transactions:[],accounts:[],reels:[],budgets:[],allocations:[],goals:[],profile:{profileId:PROFILE_ID,userName:PROFILE_NAME},hoorsunStage:{shoot:false,edit:false,upload:false}};
 let planner={anchor:new Date(),selected:new Date()};
 let amountCategory=null,editingAccount=null,pendingAllocation=null,lastUndo=null,prefillIncomeSource=null,editingEventId=null,stageLock=false;
+let appHealth={ok:true,lastCheck:0,issues:[]};
+let lastRenderFailures=0;
+let appInitialized=false;
+
+
+async function recordAppError(source,error,extra={}){
+  try{
+    const message=error?.message||String(error||"Unknown error");
+    await putQuiet("logs",{
+      id:newId("log"),
+      type:"app-error",
+      source,
+      message,
+      stack:String(error?.stack||"").slice(0,6000),
+      at:Date.now(),
+      version:APP_VERSION,
+      ...extra
+    });
+    await pruneLogs().catch(()=>{})
+  }catch(_){}
+}
+
+function showHealthBanner(title,message){
+  const bar=$("appHealthBanner");if(!bar)return;
+  $("appHealthTitle").textContent=title;
+  $("appHealthMessage").textContent=message;
+  bar.hidden=false
+}
+function hideHealthBanner(){
+  const bar=$("appHealthBanner");if(bar)bar.hidden=true
+}
+window.retryAppStart=()=>location.reload();
+
+function safeRender(name,fn){
+  try{
+    fn();
+    return true
+  }catch(err){
+    console.error(`[MIA:${name}]`,err);
+    recordAppError(`render:${name}`,err);
+    return false
+  }
+}
+
+function installGlobalErrorCapture(){
+  window.addEventListener("error",event=>{
+    recordAppError("window.error",event.error||event.message||"Unknown window error");
+  });
+  window.addEventListener("unhandledrejection",event=>{
+    recordAppError("unhandledrejection",event.reason||"Unhandled promise rejection");
+  });
+}
 
 async function init(){
-  await openDB();await seed();await load();await ensureDefaultThursdays();await load();
-  $("todayLabel").textContent=pFull(new Date());
-  renderAll();installInteractionGuards();wireMode();
-  $("dbStatus").textContent="MIA v0.9.3 آماده است";
+  installGlobalErrorCapture();
+  installActionDelegation();
+
+  await openDB();
+  await seed();
+  await load();
+
+  try{
+    await ensureDefaultThursdays();
+    await load();
+  }catch(err){
+    console.warn("Default Thursday generation skipped",err);
+    recordAppError("ensureDefaultThursdays",err);
+  }
+
+  $("todayLabel").textContent=`دستیار مالی و کاری · ${PROFILE_NAME}`;
+  renderAll();
+  installInteractionGuards();
+  wireMode();
+
+  try{
+    await initCloudSync();
+  }catch(err){
+    console.warn("Cloud sync initialization failed",err);
+    recordAppError("cloud:init",err);
+  }
+
+  appInitialized=true;
+  $("dbStatus").textContent=`MIA v${APP_VERSION} آماده است`;
+
+  await runHealthCheck(false);
 }
+
+async function migrateProfileOwnership(){
+  const stores=[
+    "tasks","events","parking","memory","chat","projects","projectTasks",
+    "transactions","accounts","reels","budgets","incomeAllocations",
+    "financialGoals","workLogs"
+  ];
+
+  for(const store of stores){
+    try{
+      const rows=await all(store);
+      for(const row of rows){
+        if(row && typeof row==="object" && !row.profileId){
+          await putQuiet(store,{...row,profileId:PROFILE_ID})
+        }
+      }
+    }catch(err){
+      recordAppError(`profile-migration:${store}`,err)
+    }
+  }
+}
+
 async function seed(){
   for(const [id,m] of Object.entries(ACCOUNT_META)){
-    const x=await get("accounts",id);if(!x)await put("accounts",{id,balance:0,bankName:"",...m})
+    const x=await get("accounts",id);
+    if(!x)await put("accounts",{id,balance:0,bankName:"",...m})
   }
+
   for(const [id,name,icon,limit] of EXPENSE_CATS){
-    const x=await get("budgets",id);if(!x)await put("budgets",{id,name,icon,monthlyLimit:limit})
+    const x=await get("budgets",id);
+    if(!x)await put("budgets",{id,name,icon,monthlyLimit:limit})
   }
+
   const defaultGoals=[
     {id:"safe30",name:"ذخیره امن",target:30_000_000,accountId:"safe"},
     {id:"carUpgrade",name:"ارتقای خودرو",target:450_000_000,accountId:"growth"},
   ];
-  for(const g of defaultGoals){const x=await get("financialGoals",g.id);if(!x)await put("financialGoals",g)}
-  const s=await get("settings","profile");if(!s)await put("settings",{key:"profile",userName:"ایمان",hoorsunTarget:12,weeklyReelTarget:3,hoorsunCyclePay:25_000_000,hirsaSalary:25_000_000,safeTarget:30_000_000,payday:29});
-  const hs=await get("settings","hoorsunStage");if(!hs)await put("settings",{key:"hoorsunStage",value:{shoot:false,edit:false,upload:false}});
-  const ex=await get("settings","thursdayExceptions");if(!ex)await put("settings",{key:"thursdayExceptions",value:[]})
+  for(const g of defaultGoals){
+    const x=await get("financialGoals",g.id);
+    if(!x)await put("financialGoals",g)
+  }
+
+  const defaults={
+    key:"profile",
+    profileId:PROFILE_ID,
+    userName:PROFILE_NAME,
+    displayName:PROFILE_NAME,
+    localName:"ایمان",
+    hoorsunTarget:12,
+    weeklyReelTarget:3,
+    hoorsunCyclePay:25_000_000,
+    hirsaSalary:25_000_000,
+    safeTarget:30_000_000,
+    payday:29
+  };
+  const existing=await get("settings","profile");
+  const merged={...defaults,...(existing||{}),key:"profile",profileId:PROFILE_ID,userName:PROFILE_NAME,displayName:PROFILE_NAME};
+  if(!existing || existing.userName!==PROFILE_NAME || existing.profileId!==PROFILE_ID){
+    await put("settings",merged)
+  }
+
+  await migrateProfileOwnership();
+
+  const hs=await get("settings","hoorsunStage");
+  if(!hs)await put("settings",{key:"hoorsunStage",value:{shoot:false,edit:false,upload:false}});
+
+  const ex=await get("settings","thursdayExceptions");
+  if(!ex)await put("settings",{key:"thursdayExceptions",value:[]})
 }
+
 async function load(){
   const names=["tasks","events","projects","projectTasks","transactions","accounts","reels","budgets","incomeAllocations","financialGoals"];
   const vals=await Promise.all(names.map(all));
-  [state.tasks,state.events,state.projects,state.projectTasks,state.transactions,state.accounts,state.reels,state.budgets,state.allocations,state.goals]=vals;
-  const hs=await get("settings","hoorsunStage");state.hoorsunStage=hs?.value||{shoot:false,edit:false,upload:false};
+  const safe=vals.map(v=>Array.isArray(v)?v:[]);
+
+  [state.tasks,state.events,state.projects,state.projectTasks,state.transactions,state.accounts,state.reels,state.budgets,state.allocations,state.goals]=safe;
+
+  const hs=await get("settings","hoorsunStage");
+  state.hoorsunStage=hs?.value&&typeof hs.value==="object"
+    ?hs.value
+    :{shoot:false,edit:false,upload:false};
+
+  const profile=await get("settings","profile");
+  state.profile={profileId:PROFILE_ID,userName:PROFILE_NAME,...(profile||{})};
+}
+
+function renderAll(){
+  const results=[
+    safeRender("home",renderHome),
+    safeRender("finance",renderFinance),
+    safeRender("work",renderWork),
+    safeRender("planner",renderPlanner),
+    safeRender("tasks",renderTasks),
+    safeRender("projects",renderProjects),
+    safeRender("settings",renderSettingsPage),
+    safeRender("notifications",renderNotificationBadge),
+    safeRender("icons",hydrateIcons)
+  ];
+  lastRenderFailures=results.filter(x=>!x).length;
+  if(lastRenderFailures){
+    showHealthBanner("بخشی از MIA با خطا اجرا شد",`${fa(lastRenderFailures)} بخش ایزوله شد؛ اطلاعات ذخیره‌شده حذف نشده‌اند.`);
+  }
+  return lastRenderFailures
 }
 function account(id){return state.accounts.find(a=>a.id===id)||{id,balance:0,...ACCOUNT_META[id]}}
 function monthTx(type){const mk=monthKey(new Date());return state.transactions.filter(t=>t.type===type&&monthKey(new Date(t.at))===mk)}
@@ -150,7 +323,6 @@ function daysToNextPay(){
   const now=new Date(),pay=nextPersianPayDate(29);
   return Math.max(0,Math.ceil((pay-now)/86400000))
 }
-function renderAll(){renderHome();renderFinance();renderWork();renderPlanner();renderTasks();renderProjects();renderSettingsPage();renderNotificationBadge();hydrateIcons()}
 function renderHome(){
   const curr=account("current").balance;
   const reels=currentCycleReels(),wr=weekReels(),reelPct=Math.min(100,reels.length/12*100);
@@ -159,7 +331,7 @@ function renderHome(){
 
   $("homeAccounts").innerHTML=["current","obligations","safe","growth"].map(id=>{
     const a=account(id),m=ACCOUNT_META[id],pct=totalAccounts?Math.round(a.balance/totalAccounts*100):0;
-    return `<button class="home-account-card account-${id}" onclick="openAccount('${id}')">
+    return `<button class="home-account-card account-${id}" data-action="${actionExpr('openAccount',id)}">
       <span class="account-mini-icon" data-icon="${m.icon}"></span>
       <b>${m.name}</b><strong>${toman(a.balance)}</strong>
       <small>${fa(pct)}٪ از کل موجودی</small><div class="mini-progress"><i style="width:${pct}%"></i></div>
@@ -192,7 +364,7 @@ function renderFinance(){
   const totalBalance=["current","obligations","safe","growth"].reduce((s,id)=>s+account(id).balance,0);
   $("financeAccounts").innerHTML=["current","obligations","safe","growth"].map(id=>{
     const a=account(id),m=ACCOUNT_META[id],pct=totalBalance?Math.round(a.balance/totalBalance*100):0;
-    return `<button class="money-card ${m.cls} account-${id}" onclick="openAccount('${id}')"><div class="money-icon" data-icon="${m.icon}"></div><b>${m.name}</b><strong>${toman(a.balance)}</strong><div class="money-card-pct">${fa(pct)}٪</div><div class="mini-progress"><i style="width:${pct}%"></i></div><small>${a.bankName||m.desc}</small></button>`
+    return `<button class="money-card ${m.cls} account-${id}" data-action="${actionExpr('openAccount',id)}"><div class="money-icon" data-icon="${m.icon}"></div><b>${m.name}</b><strong>${toman(a.balance)}</strong><div class="money-card-pct">${fa(pct)}٪</div><div class="mini-progress"><i style="width:${pct}%"></i></div><small>${esc(a.bankName||m.desc)}</small></button>`
   }).join("");
   renderIncomeBreakdown();renderLastAllocation();renderGoals();renderExpenses();renderIncome();renderBudgets();
 }
@@ -223,7 +395,7 @@ function renderGoals(){
   }).join("")
 }
 function renderExpenses(){
-  $("expenseQuickGrid").innerHTML=EXPENSE_CATS.slice(0,9).map(([id,name,icon])=>`<button class="expense-cat" onclick="openAmount('${id}')"><i data-icon="${icon}"></i><span>${name}</span></button>`).join("");
+  $("expenseQuickGrid").innerHTML=EXPENSE_CATS.slice(0,9).map(([id,name,icon])=>`<button class="expense-cat" data-action="${actionExpr('openAmount',id)}"><i data-icon="${icon}"></i><span>${name}</span></button>`).join("");
   const tx=monthTx("expense").sort((a,b)=>b.at-a.at);
   $("expenseList").innerHTML=tx.length?tx.slice(0,30).map(txRow).join(""):empty("هنوز هزینه‌ای ثبت نشده.")
 }
@@ -231,7 +403,7 @@ function renderIncome(){
   const sources=["hirsa","hoorsun","snapp","freelance"],total=sum(sources,s=>sourceIncome(s));
   $("incomeSourceCards").innerHTML=sources.map(s=>{
     const value=sourceIncome(s),pct=total?Math.round(value/total*100):0;
-    return `<button class="source-card source-${s}" onclick="openQuick('income','${s}')"><div class="source-card-top"><b>${SOURCE_META[s].name}</b><span>${fa(pct)}٪</span></div><strong>${toman(value)}</strong><div class="source-progress"><i style="width:${pct}%;background:${SOURCE_META[s].color}"></i></div><small>از درآمد دریافت‌شده این ماه</small></button>`
+    return `<button class="source-card source-${s}" data-action="${actionExpr('openQuick','income',s)}"><div class="source-card-top"><b>${SOURCE_META[s].name}</b><span>${fa(pct)}٪</span></div><strong>${toman(value)}</strong><div class="source-progress"><i style="width:${pct}%;background:${SOURCE_META[s].color}"></i></div><small>از درآمد دریافت‌شده این ماه</small></button>`
   }).join("");
   const tx=monthTx("income").sort((a,b)=>b.at-a.at);
   $("incomeList").innerHTML=tx.length?tx.slice(0,30).map(txRow).join(""):empty("هنوز درآمدی ثبت نشده.")
@@ -278,13 +450,13 @@ function renderWork(){
   hydrateIcons();
 }
 function renderProjects(){
-  $("projectsList").innerHTML=state.projects.length?state.projects.slice().reverse().map(p=>`<div class="project-card"><b>${esc(p.title)}</b><small>${p.value?toman(p.value):"بدون مبلغ"} · ${p.status||"فعال"}</small></div>`).join(""):empty("فعلاً پروژه فریلنس فعالی ثبت نشده.")
+  $("projectsList").innerHTML=state.projects.length?state.projects.slice().reverse().map(p=>`<div class="project-card"><b>${esc(p.title)}</b><small>${p.value?toman(p.value):"بدون مبلغ"} · ${esc(p.status||"فعال")}</small></div>`).join(""):empty("فعلاً پروژه فریلنس فعالی ثبت نشده.")
 }
 
 function localDateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 async function ensureDefaultThursdays(){
   const ex=(await get("settings","thursdayExceptions"))?.value||[],today=new Date();today.setHours(10,0,0,0);
-  for(let i=0;i<84;i++){const d=addDays(today,i);if(d.getDay()!==4)continue;const key=localDateKey(d);if(ex.includes(key))continue;if(!state.events.some(e=>e.recurrenceKey===key))await put("events",{id:now()+i,title:"فیلم‌برداری هورسان",startISO:d.toISOString(),durationMin:180,alertBeforeMin:60,type:"work",source:"system-hoorsun",defaultThursday:true,recurrenceKey:key,createdAt:now()})}
+  for(let i=0;i<84;i++){const d=addDays(today,i);if(d.getDay()!==4)continue;const key=localDateKey(d);if(ex.includes(key))continue;if(!state.events.some(e=>e.recurrenceKey===key))await put("events",{id:newId("event"),title:"فیلم‌برداری هورسان",startISO:d.toISOString(),durationMin:180,alertBeforeMin:60,type:"work",source:"system-hoorsun",defaultThursday:true,recurrenceKey:key,createdAt:now()})}
 }
 async function persistHoorsunStage(next){
   state.hoorsunStage=next;await put("settings",{key:"hoorsunStage",value:next});renderWork();renderHome()
@@ -387,7 +559,7 @@ function isCompletedPhrase(q){
 async function addCompletedTask(rawTitle){
   const title=normalizeWorkTitle(rawTitle);
   const category=detectTaskCategory(`${rawTitle} ${title}`),ts=now();
-  await put("tasks",{id:ts,title,time:"انجام‌شده",dueISO:new Date(ts).toISOString(),done:true,doneAt:ts,category,createdAt:ts,completedVia:"quick",rawTitle});
+  await put("tasks",{id:newId("task"),title,time:"انجام‌شده",dueISO:new Date(ts).toISOString(),done:true,doneAt:ts,category,createdAt:ts,completedVia:"quick",rawTitle});
   await load();renderAll();openPlannerTab("done");
   toast(`«${title}» در ${TASK_CATEGORY_META[category].name} ثبت شد ✓`)
 }
@@ -419,13 +591,13 @@ window.openHirsaDone=()=>{
 function renderPlanner(){
   $("monthTitle").textContent=pMonthTitle(planner.anchor);$("selectedDate").textContent=pFull(planner.selected);
   const {cells}=monthCells(planner.anchor),ap=pParts(planner.anchor),today=new Date();
-  $("monthGrid").innerHTML=cells.map(d=>{const pp=pParts(d),inside=pp.month===ap.month&&pp.year===ap.year,evCount=eventsFor(d).length,taskCount=tasksForDate(d,true).length,has=evCount+taskCount>0,key=localDateKey(d);return `<button class="day-cell ${inside?"":"muted"} ${isSameDay(d,today)?"today":""} ${isSameDay(d,planner.selected)?"selected":""}" data-day-key="${key}" onclick="handleDayClick('${d.toISOString()}','${key}')"><span>${pDayNum(d)}</span>${has?`<i class="day-indicator ${taskCount&&evCount?"mixed":taskCount?"task":"event"}"></i>`:""}</button>`}).join("");
+  $("monthGrid").innerHTML=cells.map(d=>{const pp=pParts(d),inside=pp.month===ap.month&&pp.year===ap.year,evCount=eventsFor(d).length,taskCount=tasksForDate(d,true).length,has=evCount+taskCount>0,key=localDateKey(d);return `<button class="day-cell ${inside?"":"muted"} ${isSameDay(d,today)?"today":""} ${isSameDay(d,planner.selected)?"selected":""}" data-day-key="${key}" data-action="${actionExpr('handleDayClick',d.toISOString(),key)}"><span>${pDayNum(d)}</span>${has?`<i class="day-indicator ${taskCount&&evCount?"mixed":taskCount?"task":"event"}"></i>`:""}</button>`}).join("");
   renderInlineDayItems();
   hydrateIcons()
 }
 function eventsFor(d){return state.events.filter(e=>isSameDay(new Date(e.startISO),d)).sort((a,b)=>new Date(a.startISO)-new Date(b.startISO))}
-function eventRow(e){const d=new Date(e.startISO);return `<div class="event-row"><div class="event-time">${new Intl.DateTimeFormat("fa-IR",{hour:"2-digit",minute:"2-digit"}).format(d)}</div><div><b>${esc(e.title)}</b><small>${e.defaultThursday?"پیش‌فرض پنجشنبه · ":""}${fa(e.durationMin||60)} دقیقه</small></div><div class="row-actions"><button class="mini-action" onclick="editEvent(${JSON.stringify(e.id)})"><span data-icon="edit"></span></button><button class="mini-action danger" onclick="deleteEvent(${JSON.stringify(e.id)})"><span data-icon="trash"></span></button></div></div>`}
-function dayTaskRow(t){return `<div class="event-row task-event-row ${t.done?"completed":""}"><div class="event-time"><span data-icon="${t.done?"check":"briefcase"}"></span></div><div><b>${esc(t.title)}</b><small>${t.done?"انجام‌شده":"کار"}</small></div><div class="row-actions">${t.done?`<button class="mini-action" onclick="reopenTask(${JSON.stringify(t.id)})"><span data-icon="rotate-ccw"></span></button>`:`<button class="mini-action success" onclick="toggleTask(${JSON.stringify(t.id)})"><span data-icon="check"></span></button>`}<button class="mini-action danger" onclick="deleteTask(${JSON.stringify(t.id)})"><span data-icon="trash"></span></button></div></div>`}
+function eventRow(e){const d=new Date(e.startISO);return `<div class="event-row"><div class="event-time">${new Intl.DateTimeFormat("fa-IR",{hour:"2-digit",minute:"2-digit"}).format(d)}</div><div><b>${esc(e.title)}</b><small>${e.defaultThursday?"پیش‌فرض پنجشنبه · ":""}${fa(e.durationMin||60)} دقیقه</small></div><div class="row-actions"><button class="mini-action" data-action="${actionExpr('editEvent',e.id)}"><span data-icon="edit"></span></button><button class="mini-action danger" data-action="${actionExpr('deleteEvent',e.id)}"><span data-icon="trash"></span></button></div></div>`}
+function dayTaskRow(t){return `<div class="event-row task-event-row ${t.done?"completed":""}"><div class="event-time"><span data-icon="${t.done?"check":"briefcase"}"></span></div><div><b>${esc(t.title)}</b><small>${t.done?"انجام‌شده":"کار"}</small></div><div class="row-actions">${t.done?`<button class="mini-action" data-action="${actionExpr('reopenTask',t.id)}"><span data-icon="rotate-ccw"></span></button>`:`<button class="mini-action success" data-action="${actionExpr('toggleTask',t.id)}"><span data-icon="check"></span></button>`}<button class="mini-action danger" data-action="${actionExpr('deleteTask',t.id)}"><span data-icon="trash"></span></button></div></div>`}
 function renderTasks(){
   const open=state.tasks.filter(t=>!t.done).sort((a,b)=>taskDate(a)-taskDate(b)),done=state.tasks.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   $("taskList").innerHTML=open.length?open.map(taskRow).join(""):empty("فعلاً کاری در لیست باز نیست.");renderDoneArchive(done);hydrateIcons()
@@ -438,7 +610,7 @@ function renderDoneArchive(done){
   $("doneFilters").innerHTML=cats.map(id=>{
     const count=id==="all"?done.length:done.filter(t=>taskCategory(t)===id).length;
     const meta=id==="all"?{name:"همه",icon:"check"}:TASK_CATEGORY_META[id];
-    return `<button class="done-filter ${doneCategoryFilter===id?"active":""} ${id!=="all"?`cat-${id}`:""}" onclick="setDoneCategory('${id}')"><span data-icon="${meta.icon}"></span><b>${meta.name}</b><small>${fa(count)}</small></button>`
+    return `<button class="done-filter ${doneCategoryFilter===id?"active":""} ${id!=="all"?`cat-${id}`:""}" data-action="${actionExpr('setDoneCategory',id)}"><span data-icon="${meta.icon}"></span><b>${meta.name}</b><small>${fa(count)}</small></button>`
   }).join("");
 
   const filtered=doneCategoryFilter==="all"?done:done.filter(t=>taskCategory(t)===doneCategoryFilter);
@@ -460,9 +632,9 @@ window.setDoneCategory=id=>{doneCategoryFilter=id;renderTasks()};
 function taskRow(t){
   const cat=taskCategory(t),m=TASK_CATEGORY_META[cat],d=taskDate(t),today=isSameDay(d,new Date());
   return `<div class="list-row task-row cat-${cat}">
-    <button class="check-btn" onclick="toggleTask(${JSON.stringify(t.id)})"><span data-icon="check"></span></button>
+    <button class="check-btn" data-action="${actionExpr('toggleTask',t.id)}"><span data-icon="check"></span></button>
     <div class="task-row-copy"><div class="task-row-meta"><span class="task-cat-pill">${m.name}</span><small>${today?"امروز":pFull(d)}</small></div><b>${esc(t.title)}</b></div>
-    <button class="mini-action danger" onclick="deleteTask(${JSON.stringify(t.id)})"><span data-icon="trash"></span></button>
+    <button class="mini-action danger" data-action="${actionExpr('deleteTask',t.id)}"><span data-icon="trash"></span></button>
   </div>`
 }
 function doneRow(t){
@@ -475,8 +647,8 @@ function doneRow(t){
       <small>${pFull(d)} · ${new Intl.DateTimeFormat("fa-IR",{hour:"2-digit",minute:"2-digit"}).format(d)}</small>
     </div>
     <div class="done-actions">
-      <button class="mini-action" onclick="reopenTask(${JSON.stringify(t.id)})" aria-label="بازگردانی"><span data-icon="rotate-ccw"></span></button>
-      <button class="mini-action danger done-delete-btn" onclick="deleteCompletedTask(${JSON.stringify(t.id)})" aria-label="حذف کار انجام‌شده"><span data-icon="trash"></span></button>
+      <button class="mini-action" data-action="${actionExpr('reopenTask',t.id)}" aria-label="بازگردانی"><span data-icon="rotate-ccw"></span></button>
+      <button class="mini-action danger done-delete-btn" data-action="${actionExpr('deleteCompletedTask',t.id)}" aria-label="حذف کار انجام‌شده"><span data-icon="trash"></span></button>
     </div>
   </article>`
 }
@@ -539,7 +711,7 @@ function renderNotifications(){
   summary.innerHTML=items.length
     ?`<div><b>${fa(items.length)} مورد نیاز به توجه</b><small>بر اساس کارها، برنامه‌ها، مالی و هورسان</small></div><span data-icon="bell"></span>`
     :`<div><b>همه‌چیز مرتب است</b><small>فعلاً مورد فوری برای پیگیری نداری.</small></div><span data-icon="check"></span>`;
-  list.innerHTML=items.length?items.map(n=>`<button class="notification-item tone-${n.tone}" onclick="openNotificationTarget('${n.kind}')">
+  list.innerHTML=items.length?items.map(n=>`<button class="notification-item tone-${n.tone}" data-action="${actionExpr('openNotificationTarget',n.kind)}">
     <span class="notification-item-icon" data-icon="${n.icon}"></span>
     <div><b>${esc(n.title)}</b><small>${esc(n.text)}</small></div>
     <span class="notification-chevron" data-icon="chevron-left"></span>
@@ -893,33 +1065,32 @@ window.submitQuick=async()=>{
   const dated=parseNaturalEvent(raw);
   if(dated){
     if(isEventIntent(q)){
-      await put("events",{id:now(),...dated,createdAt:now()});await load();renderAll();closeSheet("quickSheet");toast("برنامه زمان‌دار ثبت شد ✓");return
+      await put("events",{id:newId("event"),...dated,createdAt:now()});await load();renderAll();closeSheet("quickSheet");toast("برنامه زمان‌دار ثبت شد ✓");return
     }
     const smartTitle=normalizeWorkTitle(dated.title||raw);
-    await put("tasks",{id:now(),title:smartTitle,rawTitle:raw,time:pFull(new Date(dated.startISO)),dueISO:dated.startISO,done:false,category:detectTaskCategory(`${raw} ${smartTitle}`),createdAt:now()});
+    await put("tasks",{id:newId("task"),title:smartTitle,rawTitle:raw,time:pFull(new Date(dated.startISO)),dueISO:dated.startISO,done:false,category:detectTaskCategory(`${raw} ${smartTitle}`),createdAt:now()});
     await load();renderAll();closeSheet("quickSheet");toast(`«${smartTitle}» به کارهای ${isSameDay(new Date(dated.startISO),new Date())?"امروز":"تاریخ انتخاب‌شده"} اضافه شد ✓`);return
   }
 
   const smartTitle=normalizeWorkTitle(raw);
-  await put("tasks",{id:now(),title:smartTitle,rawTitle:raw,time:"امروز",dueISO:new Date().toISOString(),done:false,category:detectTaskCategory(`${raw} ${smartTitle}`),createdAt:now()});
+  await put("tasks",{id:newId("task"),title:smartTitle,rawTitle:raw,time:"امروز",dueISO:new Date().toISOString(),done:false,category:detectTaskCategory(`${raw} ${smartTitle}`),createdAt:now()});
   await load();renderAll();closeSheet("quickSheet");toast(`«${smartTitle}» به کارهای امروز اضافه شد ✓`)
 };
 
 async function addExpense(amount,category,note){
-  const id=now(),before=account("current").balance;
-  if(amount>before)return toast("موجودی حساب جاری برای این هزینه کافی نیست؛ ابتدا موجودی را تطبیق بده یا انتقال بین حساب‌ها را ثبت کن."),false;
-  await put("transactions",{id,type:"expense",amount,category,note,accountId:"current",at:now()});
-  await put("accounts",{...account("current"),balance:before-amount});
-  lastUndo={kind:"expense",id,amount,before};await load();renderAll();
-  const b=state.budgets.find(x=>x.id===category),spent=expenseSpent(category),remain=b?Math.max(0,b.monthlyLimit-spent):0;
-  toast(`${toman(amount)} در «${b?.name||"هزینه"}» ثبت شد · بودجه باقی‌مانده ${toman(remain)}`,"برگرداندن",undoLast);return true
+  try{
+    const result=await recordExpenseAtomic({amount,category,note});
+    lastUndo={kind:"expense",id:result.id,amount};await load();renderAll();
+    const b=state.budgets.find(x=>x.id===category),spent=expenseSpent(category),remain=b?Math.max(0,b.monthlyLimit-spent):0;
+    toast(`${toman(amount)} در «${b?.name||"هزینه"}» ثبت شد · بودجه باقی‌مانده ${toman(remain)}`,"برگرداندن",undoLast);return true
+  }catch(err){toast(err.message||"ثبت هزینه انجام نشد.");return false}
 }
 async function addIncome(amount,source,note){
-  const id=now();await put("transactions",{id,type:"income",amount,source,note,accountId:"current",at:now()});
-  await put("accounts",{...account("current"),balance:account("current").balance+amount});
-  const parts=buildAllocation(amount);
-  const alloc={id:now()+1,at:now(),incomeTxId:id,source,amount,parts,confirmed:false};await put("incomeAllocations",alloc);
-  pendingAllocation=alloc;await load();renderAll();showAllocation(alloc)
+  try{
+    const parts=buildAllocation(amount);
+    const alloc=await recordIncomeAtomic({amount,source,note,parts});
+    pendingAllocation=alloc;await load();renderAll();showAllocation(alloc)
+  }catch(err){toast(err.message||"ثبت درآمد انجام نشد.")}
 }
 function buildAllocation(amount){
   const safeTarget=30_000_000;
@@ -958,15 +1129,13 @@ function showAllocation(a){
 }
 window.confirmAllocation=async()=>{
   const a=pendingAllocation||[...state.allocations].sort((x,y)=>y.at-x.at).find(x=>!x.confirmed);if(!a)return closeSheet("allocationSheet");
-  const cur=account("current"),move=a.parts.obligations.amount+a.parts.safe.amount+a.parts.growth.amount;
-  if(cur.balance<move)return toast("موجودی حساب جاری برای تأیید این تقسیم کافی نیست؛ ابتدا موجودی بانک‌ها را تطبیق بده.");
-  await put("accounts",{...cur,balance:cur.balance-move});
-  for(const id of ["obligations","safe","growth"])await put("accounts",{...account(id),balance:account(id).balance+a.parts[id].amount});
-  await put("incomeAllocations",{...a,confirmed:true,confirmedAt:now()});pendingAllocation=null;await load();renderAll();closeSheet("allocationSheet");toast("تقسیم درآمد با موجودی چهار حساب هماهنگ شد ✓")
+  try{
+    await confirmAllocationAtomic(a.id);pendingAllocation=null;await load();renderAll();closeSheet("allocationSheet");toast("تقسیم درآمد با موجودی چهار حساب هماهنگ شد ✓")
+  }catch(err){toast(err.message||"تأیید تقسیم درآمد انجام نشد.")}
 };
 async function addReel(note){
   const reels=currentCycleReels();if(reels.length>=12)return toast("چرخه ۱۲ ریلزی کامل شده؛ از بخش تنظیمات، چرخه جدید را شروع کن.");
-  await put("reels",{id:now(),at:now(),status:"delivered",note,archived:false});await load();renderAll();
+  await put("reels",{id:newId("reel"),at:now(),status:"delivered",note,archived:false});await load();renderAll();
   const n=currentCycleReels().length,remain=12-n,wr=weekReels().length,need=Math.max(0,3-wr);
   toast(`ریلز ${fa(n)} از ۱۲ ثبت شد · ${fa(remain)} تا پایان چرخه · ${fa(need)} تا هدف این هفته`)
 }
@@ -974,9 +1143,9 @@ async function quickTransfer(q,amount){
   const map={"جاری":"current","تعهدات":"obligations","ذخیره":"safe","اهداف":"growth"};
   const fromName=Object.keys(map).find(x=>new RegExp(`از\\s+${x}`).test(q)),toName=Object.keys(map).find(x=>new RegExp(`به\\s+${x}`).test(q));
   if(!fromName||!toName)return toast("مبدأ یا مقصد انتقال مشخص نیست.");
-  const from=map[fromName],to=map[toName],fromAccount=account(from);if(fromAccount.balance<amount)return toast(`موجودی ${fromName} برای این انتقال کافی نیست.`);
-  await put("accounts",{...fromAccount,balance:fromAccount.balance-amount});await put("accounts",{...account(to),balance:account(to).balance+amount});
-  await put("transactions",{id:now(),type:"transfer",amount,from,to,note:`${fromName} → ${toName}`,at:now()});await load();renderAll();toast(`${toman(amount)} از ${fromName} به ${toName} منتقل شد ✓`)
+  const from=map[fromName],to=map[toName];
+  try{await recordTransferAtomic({from,to,amount,note:`${fromName} → ${toName}`});await load();renderAll();toast(`${toman(amount)} از ${fromName} به ${toName} منتقل شد ✓`)}
+  catch(err){toast(err.message||"انتقال انجام نشد.")}
 }
 window.openAccount=id=>{
   editingAccount=id;const a=account(id);
@@ -988,13 +1157,13 @@ window.openAccount=id=>{
 window.saveAccountBalance=async()=>{
   const raw=$("accountBalanceInput").value.trim();if(!raw)return toast("موجودی واقعی بانک را وارد کن.");
   const amount=parseAmount(raw),bankName=$("accountBankInput").value.trim();
-  await put("accounts",{...account(editingAccount),balance:amount,bankName});
-  await load();renderAll();closeSheet("accountSheet");toast("موجودی و نام بانک هماهنگ شد ✓")
+  try{await reconcileAccountAtomic({accountId:editingAccount,balance:amount,bankName});await load();renderAll();closeSheet("accountSheet");toast("موجودی بانک تطبیق شد؛ این اصلاح درآمد یا هزینه محسوب نشد ✓")}
+  catch(err){toast(err.message||"تطبیق موجودی انجام نشد.")}
 };
 
 window.openEventSheet=()=>{editingEventId=null;$("eventModeLabel").textContent="برنامه جدید";$("eventSaveBtn").textContent="ثبت در تقویم";$("eventDateText").textContent=pFull(planner.selected);$("eventTitle").value="";$("eventTime").value="10:00";$("eventDuration").value="60";openSheet("eventSheet");focusSheetField("eventTitle")};
 window.editEvent=id=>{const e=state.events.find(x=>x.id===id);if(!e)return;editingEventId=id;const d=new Date(e.startISO);planner.selected=new Date(d);planner.anchor=new Date(d);$("eventModeLabel").textContent="ویرایش برنامه";$("eventSaveBtn").textContent="ذخیره تغییرات";$("eventDateText").textContent=pFull(d);$("eventTitle").value=e.title;$("eventTime").value=`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;$("eventDuration").value=e.durationMin||60;openSheet("eventSheet")};
-window.saveEvent=async()=>{const title=$("eventTitle").value.trim();if(!title)return toast("عنوان را وارد کن.");const [h,m]=($("eventTime").value||"10:00").split(":").map(Number),d=new Date(planner.selected);d.setHours(h,m,0,0);const old=editingEventId?state.events.find(x=>x.id===editingEventId):null;await put("events",{...(old||{}),id:old?.id||now(),title,startISO:d.toISOString(),durationMin:+$("eventDuration").value||60,alertBeforeMin:60,type:old?.type||"event",createdAt:old?.createdAt||now(),updatedAt:now(),defaultThursday:false});editingEventId=null;await load();planner.selected=d;planner.anchor=d;renderAll();closeSheet("eventSheet");toast(old?"تغییرات برنامه ذخیره شد ✓":"در برنامه ثبت شد ✓")};
+window.saveEvent=async()=>{const title=$("eventTitle").value.trim();if(!title)return toast("عنوان را وارد کن.");const [h,m]=($("eventTime").value||"10:00").split(":").map(Number),d=new Date(planner.selected);d.setHours(h,m,0,0);const old=editingEventId?state.events.find(x=>x.id===editingEventId):null;await put("events",{...(old||{}),id:old?.id||newId("event"),title,startISO:d.toISOString(),durationMin:+$("eventDuration").value||60,alertBeforeMin:60,type:old?.type||"event",createdAt:old?.createdAt||now(),updatedAt:now(),defaultThursday:false});editingEventId=null;await load();planner.selected=d;planner.anchor=d;renderAll();closeSheet("eventSheet");toast(old?"تغییرات برنامه ذخیره شد ✓":"در برنامه ثبت شد ✓")};
 window.deleteEvent=async id=>{
   const e=state.events.find(x=>x.id===id);if(!e)return;if(!confirm(`«${e.title}» حذف شود؟`))return;
   if(e.recurrenceKey&&e.source==="system-hoorsun"){
@@ -1007,7 +1176,7 @@ window.openTaskSheet=()=>{$("taskTitle").value="";$("taskDateText").textContent=
 window.saveTask=async()=>{
   const rawTitle=$("taskTitle").value.trim();if(!rawTitle)return;
   const title=normalizeWorkTitle(rawTitle),d=new Date(planner.selected);d.setHours(9,0,0,0);
-  await put("tasks",{id:now(),title,rawTitle,time:pFull(d),dueISO:d.toISOString(),done:false,category:detectTaskCategory(`${rawTitle} ${title}`),createdAt:now()});
+  await put("tasks",{id:newId("task"),title,rawTitle,time:pFull(d),dueISO:d.toISOString(),done:false,category:detectTaskCategory(`${rawTitle} ${title}`),createdAt:now()});
   await load();renderAll();closeSheet("taskSheet");renderInlineDayItems();
   toast(`«${title}» به کارهای ${pFull(d)} اضافه شد ✓`)
 };
@@ -1028,28 +1197,304 @@ window.deleteCompletedTask=async id=>{
 
 window.deleteTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;if(!confirm(`«${t.title}» حذف شود؟`))return;await remove("tasks",id);await load();renderAll();renderInlineDayItems();toast("کار حذف شد")};
 window.openProjectSheet=()=>{$("projectTitle").value="";$("projectValue").value="";openSheet("projectSheet")};
-window.saveProject=async()=>{const title=$("projectTitle").value.trim();if(!title)return toast("نام پروژه را وارد کن.");const value=parseAmount($("projectValue").value,"income");await put("projects",{id:now(),title,value,status:"فعال",createdAt:now()});await load();renderAll();closeSheet("projectSheet");toast("پروژه فریلنس ساخته شد ✓")};
+window.saveProject=async()=>{const title=$("projectTitle").value.trim();if(!title)return toast("نام پروژه را وارد کن.");const value=parseAmount($("projectValue").value,"income");await put("projects",{id:newId("project"),title,value,status:"فعال",createdAt:now()});await load();renderAll();closeSheet("projectSheet");toast("پروژه فریلنس ساخته شد ✓")};
 window.resetHoorsunCycle=async()=>{
   if(!confirm("چرخه فعلی هورسان آرشیو و چرخه جدید شروع شود؟"))return;
   for(const r of currentCycleReels())await put("reels",{...r,archived:true,archivedAt:now()});
   await put("settings",{key:"hoorsunStage",value:{shoot:false,edit:false,upload:false}});
   await load();renderAll();switchPage("work");openWorkTab("hoorsun");toast("چرخه جدید هورسان شروع شد ✓")
 };
+function formatSyncTime(ts){
+  if(!ts)return "—";
+  const d=new Date(ts);
+  return `${pFull(d)} · ${new Intl.DateTimeFormat("fa-IR",{hour:"2-digit",minute:"2-digit"}).format(d)}`
+}
+
+function renderCloudSyncStatus(){
+  const s=getCloudSyncStatus();
+  const connected=s.connected;
+  const enabled=s.enabled;
+  const syncing=s.syncing;
+  const last=s.lastSyncAt?formatSyncTime(s.lastSyncAt):"—";
+
+  const accountStatus=$("cloudAccountStatus");
+  if(accountStatus){
+    accountStatus.textContent=syncing
+      ?"در حال همگام‌سازی امن…"
+      :s.conflict
+        ?"تداخل نسخه محلی و GitHub · نیاز به تصمیم"
+        :connected
+          ?s.dirty?"GitHub متصل · بکاپ در انتظار ارسال":enabled?"GitHub متصل · بکاپ خودکار فعال":"GitHub متصل · بکاپ خودکار متوقف"
+          :"ذخیره محلی فعال · GitHub هنوز متصل نیست";
+  }
+
+  const lastEl=$("cloudLastSync");
+  if(lastEl)lastEl.textContent=`آخرین همگام‌سازی: ${last}`;
+
+  [$("cloudStatusDot"),$("cloudSheetStatusDot")].forEach(dot=>{
+    if(!dot)return;
+    dot.classList.toggle("connected",connected&&enabled&&!s.lastError);
+    dot.classList.toggle("syncing",syncing);
+    dot.classList.toggle("error",!!s.lastError||!!s.conflict);
+    dot.classList.toggle("pending",!!s.dirty&&!syncing&&!s.conflict);
+  });
+
+  if($("cloudSheetStatus")){
+    $("cloudSheetStatus").textContent=syncing
+      ?"در حال همگام‌سازی…"
+      :s.conflict
+        ?"تداخل نسخه محلی و ابری"
+        :s.lastError
+          ?"خطا در همگام‌سازی"
+          :connected
+          ?enabled?"GitHub متصل و بکاپ خودکار فعال است":"GitHub متصل است"
+          :"فقط ذخیره محلی فعال است";
+  }
+
+  if($("cloudSheetLastSync")){
+    $("cloudSheetLastSync").textContent=s.conflict
+      ?"نسخه GitHub تغییر کرده؛ بازیابی یا بازنویسی دستی را انتخاب کن."
+      :s.lastError
+        ?`خطا: ${s.lastError}`
+        :s.dirty
+          ?"تغییرات محلی ذخیره شده و در صف بکاپ هستند."
+          :s.lastSyncAt
+        ?`آخرین بکاپ موفق: ${last}`
+        :"هنوز بکاپ ابری ثبت نشده.";
+  }
+
+  const toggle=$("cloudAutoToggle");
+  if(toggle){
+    toggle.textContent=`بکاپ خودکار: ${enabled?"روشن":"خاموش"}`;
+    toggle.classList.toggle("active",enabled);
+    toggle.disabled=!connected;
+  }
+
+  const connectBtn=$("cloudConnectBtn");
+  if(connectBtn){
+    connectBtn.textContent=connected?"به‌روزرسانی اتصال GitHub":"اتصال و فعال‌سازی بکاپ خودکار";
+  }
+}
+
 function renderSettingsPage(){
-  const el=$("settingsTotalBalance");if(el)el.textContent=toman(["current","obligations","safe","growth"].reduce((s,id)=>s+account(id).balance,0));
+  const el=$("settingsTotalBalance");
+  if(el)el.textContent=toman(["current","obligations","safe","growth"].reduce((s,id)=>s+account(id).balance,0));
+
+  const health=$("appHealthText");
+  if(health){
+    health.textContent=appHealth.lastCheck
+      ?appHealth.ok?"ساختار، دیتابیس و رابط سالم هستند":`${fa(appHealth.issues.length)} مورد نیاز به بررسی`
+      :"در حال بررسی ساختار برنامه…";
+  }
+
+  renderCloudSyncStatus();
   hydrateIcons()
 }
 
 window.exportData=async()=>{
-  const data={exportedAt:new Date().toISOString(),version:"MIA 0.9.3",...state};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`MIA-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
+  try{
+    const snapshot=await snapshotDB();
+    const data={
+      format:"MIA-Portable-Backup",
+      exportedAt:new Date().toISOString(),
+      version:`MIA ${APP_VERSION}`,
+      profile:{id:PROFILE_ID,userName:PROFILE_NAME},
+      snapshot
+    };
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;
+    a.download=`MIA-Iman-Dk-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000)
+  }catch(err){
+    recordAppError("export",err);
+    toast("ساخت فایل پشتیبان با خطا روبه‌رو شد.")
+  }
 };
+window.openCloudSyncSettings=async()=>{
+  const s=getCloudSyncStatus();
+  $("cloudOwnerInput").value=s.owner||"ImanDk";
+  $("cloudRepoInput").value=s.repo||"NOVA";
+  $("cloudBranchInput").value=s.branch||"mia-backup";
+  $("cloudPathInput").value=s.path||"mia-data/iman-dk.mia.json";
+  $("cloudTokenInput").value="";
+  $("cloudRecoveryInput").value="";
+
+  try{
+    const key=await getRecoveryKey();
+    $("cloudRecoveryKey").textContent=key?`${key.slice(0,8)}••••••••${key.slice(-6)}`:"—";
+  }catch(_){
+    $("cloudRecoveryKey").textContent="—";
+  }
+
+  renderCloudSyncStatus();
+  openSheet("cloudSyncSheet")
+};
+
+window.connectCloudGitHub=async()=>{
+  const btn=$("cloudConnectBtn");
+  if(btn)btn.disabled=true;
+
+  try{
+    const s=getCloudSyncStatus();
+    const tokenInput=$("cloudTokenInput").value.trim();
+
+    await connectGitHub({
+      owner:$("cloudOwnerInput").value.trim()||"ImanDk",
+      repo:$("cloudRepoInput").value.trim()||"NOVA",
+      branch:$("cloudBranchInput").value.trim()||"mia-backup",
+      path:$("cloudPathInput").value.trim()||"mia-data/iman-dk.mia.json",
+      token:tokenInput||undefined
+    });
+
+    $("cloudTokenInput").value="";
+    const key=await getRecoveryKey();
+    $("cloudRecoveryKey").textContent=`${key.slice(0,8)}••••••••${key.slice(-6)}`;
+    renderCloudSyncStatus();
+    const status=getCloudSyncStatus();
+    toast(status.conflict?"GitHub متصل شد؛ یک بکاپ قبلی پیدا شد. برای حفظ اطلاعات، ابتدا بازیابی یا همگام‌سازی دستی را انتخاب کن.":"GitHub متصل شد و اولین بکاپ رمزگذاری‌شده ثبت شد ✓")
+  }catch(err){
+    console.error(err);
+    recordAppError("cloud:connect",err);
+    renderCloudSyncStatus();
+    toast(`اتصال GitHub ناموفق بود: ${err.message||"خطای نامشخص"}`)
+  }finally{
+    if(btn)btn.disabled=false
+  }
+};
+
+window.manualCloudSync=async()=>{
+  try{
+    await syncNow({reason:"manual",force:true});
+    renderCloudSyncStatus();
+    toast("آخرین اطلاعات Iman Dk روی GitHub ذخیره شد ✓")
+  }catch(err){
+    if(err?.code==="CLOUD_CONFLICT"){
+      renderCloudSyncStatus();
+      if(confirm("نسخه GitHub از آخرین نسخه شناخته‌شده متفاوت است. اگر ادامه بدهی، نسخه محلی جایگزین بکاپ GitHub می‌شود. ادامه می‌دهی؟")){
+        try{await syncNow({reason:"manual-conflict",force:true,forceConflict:true});renderCloudSyncStatus();toast("نسخه محلی با تأیید تو روی GitHub جایگزین شد ✓");return}catch(nextErr){err=nextErr}
+      }else{toast("همگام‌سازی متوقف شد؛ می‌توانی از دکمه بازیابی، نسخه GitHub را دریافت کنی.");return}
+    }
+    recordAppError("cloud:manual-sync",err);renderCloudSyncStatus();toast(`همگام‌سازی انجام نشد: ${err.message||"خطا"}`)
+  }
+};
+
+window.toggleCloudAutoSync=async()=>{
+  const s=getCloudSyncStatus();
+  try{
+    await setCloudAutoEnabled(!s.enabled);
+    renderCloudSyncStatus();
+    toast(!s.enabled?"بکاپ خودکار روشن شد ✓":"بکاپ خودکار متوقف شد")
+  }catch(err){
+    toast(err.message||"تغییر وضعیت همگام‌سازی انجام نشد.")
+  }
+};
+
+window.disconnectCloudSync=async()=>{
+  const s=getCloudSyncStatus();
+  if(!s.connected)return toast("GitHub متصل نیست.");
+  if(!confirm("اتصال GitHub قطع شود؟ اطلاعات محلی MIA حذف نمی‌شود."))return;
+
+  await disconnectCloud();
+  renderCloudSyncStatus();
+  toast("اتصال GitHub قطع شد؛ اطلاعات محلی حفظ شده است.")
+};
+
+window.copyCloudRecoveryKey=async()=>{
+  try{
+    const key=await getRecoveryKey();
+    await navigator.clipboard.writeText(key);
+    toast("کلید بازیابی کپی شد. آن را خارج از MIA نگه دار ✓")
+  }catch(err){
+    const key=await getRecoveryKey().catch(()=>"");
+    if(key)prompt("کلید بازیابی را کپی کن:",key);
+    else toast("کلید بازیابی در دسترس نیست.")
+  }
+};
+
+window.restoreCloudBackup=async()=>{
+  if(!confirm("اطلاعات GitHub جایگزین اطلاعات فعلی MIA شود؟ قبل از بازیابی یک نسخه اضطراری محلی نگه داشته می‌شود."))return;
+
+  try{
+    const recoveryKey=$("cloudRecoveryInput").value.trim();
+    await restoreFromGitHub({recoveryKey});
+    $("cloudRecoveryInput").value="";
+    renderCloudSyncStatus();
+    toast("اطلاعات از بکاپ GitHub بازیابی شد ✓")
+  }catch(err){
+    recordAppError("cloud:restore",err);
+    renderCloudSyncStatus();
+    toast(`بازیابی انجام نشد: ${err.message||"خطا"}`)
+  }
+};
+
+window.runHealthCheck=async(showResult=false)=>{
+  const issues=[];
+
+  try{
+    const db=await databaseHealth();
+    if(!db.ok)issues.push(`DB: ${db.missingStores.join(", ")}`);
+  }catch(err){
+    issues.push(`Database: ${err.message||err}`);
+  }
+
+  const requiredIds=[
+    "home","finance","work","planner","settingsPage","quickSheet",
+    "notificationSheet","financeTabs","monthGrid","dayEvents",
+    "cloudSyncSheet","cloudAccountStatus"
+  ];
+  const missingIds=requiredIds.filter(id=>!$(id));
+  if(missingIds.length)issues.push(`DOM: ${missingIds.join(", ")}`);
+
+  for(const key of ["tasks","events","projects","transactions","accounts","reels","budgets","goals"]){
+    if(!Array.isArray(state[key]))issues.push(`State: ${key}`);
+    else if(state[key].some(row=>row && typeof row==="object" && row.profileId!==PROFILE_ID))issues.push(`Profile ownership: ${key}`);
+  }
+
+  if(typeof startOfDay!=="function")issues.push("Date helper: startOfDay");
+  if(!window.crypto?.subtle)issues.push("Web Crypto unavailable");
+  issues.push(...runPureSelfTests({newId,escapeHtml,startOfDay}));
+  if(lastRenderFailures>0)issues.push(`Render isolation: ${lastRenderFailures}`);
+
+  appHealth={
+    ok:issues.length===0,
+    lastCheck:Date.now(),
+    issues
+  };
+
+  renderSettingsPage();
+
+  if(appHealth.ok){
+    hideHealthBanner();
+    if(showResult)toast("بررسی سلامت MIA بدون خطا پاس شد ✓")
+  }else{
+    showHealthBanner("MIA نیاز به بررسی دارد",`${fa(issues.length)} مورد در بررسی سلامت شناسایی شد.`);
+    if(showResult)toast(`${fa(issues.length)} مورد در بررسی سلامت پیدا شد.`)
+  }
+
+  return appHealth
+};
+
+window.addEventListener("mia:action-error",e=>recordAppError("action",new Error(e.detail?.message||"Action error"),{expr:e.detail?.expr||""}));
+window.addEventListener("mia:cloud-status",()=>safeRender("cloud-status",renderCloudSyncStatus));
+window.addEventListener("mia:cloud-restored",async()=>{
+  try{
+    await load();
+    renderAll();
+    await runHealthCheck(false);
+  }catch(err){
+    recordAppError("cloud:post-restore",err)
+  }
+});
+
 async function undoLast(){
   if(!lastUndo)return;const u=lastUndo;lastUndo=null;
-  if(u.kind==="expense"){await remove("transactions",u.id);await put("accounts",{...account("current"),balance:u.before});await load();renderAll();toast("هزینه برگردانده شد")}
+  if(u.kind==="expense"){try{await undoExpenseAtomic(u.id);await load();renderAll();toast("هزینه برگردانده شد")}catch(err){toast(err.message||"بازگردانی هزینه انجام نشد.")}}
 }
 function toast(text,actionText="",action=null){
-  $("toastText").textContent=text;const b=$("toastAction");b.textContent=actionText;b.style.display=actionText?"block":"none";b.onclick=()=>{if(action)action();$("toast").classList.remove("show")};
+  $("toastText").textContent=text;const b=$("toastAction");b.textContent=actionText;b.style.display=actionText?"block":"none";b._miaAction=action;
+  if(!b.dataset.listenerReady){b.dataset.listenerReady="1";b.addEventListener("click",()=>{const fn=b._miaAction;b._miaAction=null;if(typeof fn==="function")fn();$("toast").classList.remove("show")})}
   $("toast").classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>$("toast").classList.remove("show"),4200)
 }
 function installInteractionGuards(){
@@ -1087,4 +1532,9 @@ function wireMode(){
   const p=new URLSearchParams(location.search);
   if(p.get("mode")==="quick")setTimeout(()=>openQuick(),350);
 }
-init().catch(e=>{console.error(e);$("dbStatus").textContent="خطای راه‌اندازی";alert("MIA درست راه‌اندازی نشد. صفحه را دوباره باز کن.")});
+init().catch(async e=>{
+  console.error("MIA startup failed",e);
+  await recordAppError("startup",e).catch(()=>{});
+  if($("dbStatus"))$("dbStatus").textContent="خطای راه‌اندازی";
+  showHealthBanner("MIA کامل راه‌اندازی نشد",e?.message||"اطلاعات محلی حذف نشده‌اند. دوباره تلاش کن.");
+});

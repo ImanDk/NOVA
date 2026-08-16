@@ -1,0 +1,4 @@
+CSS final structure:
+- styles.css: core/base tokens and base layout only.
+- styles-features.css: accumulated feature/version layers kept in original cascade order.
+- Split is behavior-preserving because the two stylesheets are loaded sequentially in the same original order.
