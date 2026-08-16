@@ -365,3 +365,197 @@ button:active,.settings-row:active{transform:scale(.975)}
   width:100%;
   min-height:150px;
 }
+
+
+/* ==========================================================
+   MIA v0.8.8 — Interaction Polish
+   1. Expense quick-sheet fix
+   2. Zoom lock
+   3. Selection/long-press lock
+   4. Smooth page & notification motion
+   5. Native-feeling +MIA bottom sheet
+   ========================================================== */
+
+/* Native app interaction: scrolling allowed, pinch zoom disallowed. */
+html,body{
+  width:100%;
+  max-width:100%;
+  overflow-x:hidden!important;
+  touch-action:pan-x pan-y;
+  -webkit-text-size-adjust:100%;
+}
+body{
+  overscroll-behavior-x:none;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none!important;
+  user-select:none!important;
+  -webkit-touch-callout:none!important;
+}
+body *{
+  -webkit-user-select:inherit;
+  user-select:inherit;
+  -webkit-touch-callout:inherit;
+}
+input,textarea,select,[contenteditable="true"]{
+  -webkit-user-select:text!important;
+  user-select:text!important;
+  -webkit-touch-callout:default!important;
+  touch-action:manipulation;
+}
+/* iOS Safari will auto-zoom focused fields below 16px. */
+input,textarea,select{
+  font-size:16px!important;
+}
+.money-input input{font-size:22px!important}
+
+/* Expense cards get a clear press response so the sheet feels connected. */
+.expense-cat{
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.expense-cat:active{
+  transform:scale(.965)!important;
+  border-color:rgba(57,215,232,.34)!important;
+  background:rgba(57,215,232,.075)!important;
+}
+
+/* ----------------------------------------------------------
+   Native-feeling Bottom Sheets
+   Keep overlays mounted so closing can animate instead of
+   disappearing immediately.
+   ---------------------------------------------------------- */
+.overlay{
+  display:flex!important;
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  background:rgba(0,8,8,0)!important;
+  transition:
+    opacity .24s ease,
+    background-color .24s ease,
+    visibility 0s linear .31s;
+  will-change:opacity;
+}
+.overlay.show{
+  opacity:1;
+  visibility:visible;
+  pointer-events:auto;
+  background:rgba(0,8,8,.64)!important;
+  transition-delay:0s;
+  animation:none!important;
+}
+.overlay.closing{
+  pointer-events:none;
+}
+.overlay .sheet{
+  opacity:0;
+  transform:translate3d(0,44px,0) scale(.985);
+  transform-origin:50% 100%;
+  animation:none!important;
+  transition:
+    transform .31s cubic-bezier(.22,.88,.26,1),
+    opacity .20s ease;
+  will-change:transform,opacity;
+  -webkit-overflow-scrolling:touch;
+}
+.overlay.show .sheet{
+  opacity:1;
+  transform:translate3d(0,0,0) scale(1);
+  animation:none!important;
+}
+.overlay:not(.show) .sheet{
+  transition:
+    transform .25s cubic-bezier(.4,0,.7,.2),
+    opacity .18s ease;
+}
+
+/* +MIA feels slightly more springy than utility sheets. */
+#quickSheet .sheet{
+  transition:
+    transform .34s cubic-bezier(.18,.9,.24,1.04),
+    opacity .21s ease;
+}
+#notificationSheet .sheet{
+  transition:
+    transform .32s cubic-bezier(.2,.84,.24,1),
+    opacity .21s ease;
+}
+
+/* ----------------------------------------------------------
+   Bottom navigation / page transitions
+   RTL tab order: Home -> Finance -> Work -> Planner.
+   ---------------------------------------------------------- */
+.app{position:relative}
+.page{
+  transform-origin:50% 10%;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+.page.active{display:block;animation:none!important}
+.page.page-entering{
+  animation:none!important;
+  opacity:0;
+}
+.page.page-entering.motion-forward{
+  transform:translate3d(-18px,2px,0) scale(.995);
+}
+.page.page-entering.motion-back{
+  transform:translate3d(18px,2px,0) scale(.995);
+}
+.page.active:not(.page-entering):not(.page-leaving){
+  opacity:1;
+  transform:translate3d(0,0,0) scale(1);
+  transition:
+    transform .32s cubic-bezier(.22,.8,.22,1),
+    opacity .25s ease;
+}
+.page.page-entering.active{
+  transition:
+    transform .32s cubic-bezier(.22,.8,.22,1),
+    opacity .25s ease;
+}
+.page.page-entering.active:not(.dummy){
+  opacity:1;
+  transform:translate3d(0,0,0) scale(1);
+}
+.page.page-leaving{
+  display:block!important;
+  position:absolute;
+  left:14px;
+  right:14px;
+  pointer-events:none;
+  z-index:0;
+  animation:none!important;
+  transition:
+    transform .27s cubic-bezier(.4,0,.5,1),
+    opacity .20s ease;
+}
+.page.page-leaving.motion-forward{
+  opacity:0;
+  transform:translate3d(14px,-1px,0) scale(.997);
+}
+.page.page-leaving.motion-back{
+  opacity:0;
+  transform:translate3d(-14px,-1px,0) scale(.997);
+}
+.page.active:not(.page-leaving){position:relative;z-index:1}
+
+.bottomnav .nav{
+  transition:
+    color .24s ease,
+    transform .25s cubic-bezier(.2,.8,.2,1),
+    background-color .24s ease,
+    opacity .24s ease!important;
+}
+.bottomnav .nav .nav-icon{
+  transition:transform .25s cubic-bezier(.2,.8,.2,1),filter .24s ease;
+}
+.bottomnav .nav.active .nav-icon{
+  transform:translateY(-2px) scale(1.08);
+}
+.bottomnav .nav:active{transform:scale(.94)}
+
+/* Horizontal movement exists only where a horizontal list is intended. */
+.done-filter-scroll,.quick-chips,.work-tabs,.planner-main-tabs{
+  touch-action:pan-x pan-y;
+}

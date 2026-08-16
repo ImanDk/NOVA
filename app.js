@@ -103,8 +103,8 @@ let amountCategory=null,editingAccount=null,pendingAllocation=null,lastUndo=null
 async function init(){
   await openDB();await seed();await load();await ensureDefaultThursdays();await load();
   $("todayLabel").textContent=pFull(new Date());
-  renderAll();wireMode();
-  $("dbStatus").textContent="MIA v0.8.7 آماده است";
+  renderAll();installInteractionGuards();wireMode();
+  $("dbStatus").textContent="MIA v0.8.8 آماده است";
 }
 async function seed(){
   for(const [id,m] of Object.entries(ACCOUNT_META)){
@@ -506,14 +506,47 @@ window.openNotificationTarget=kind=>{
   else if(kind==="finance"){switchPage("finance");openFinanceTab("overview")}
 };
 
+const PAGE_ORDER={home:0,finance:1,work:2,planner:3,settingsPage:4};
+let pageMotionToken=0;
 window.switchPage=id=>{
   const current=document.querySelector(".page.active"),next=$(id);
   if(!next||current===next)return;
-  if(current){current.classList.add("page-leaving");setTimeout(()=>{current.classList.remove("active","page-leaving")},120)}
-  next.classList.add("active","page-entering");requestAnimationFrame(()=>requestAnimationFrame(()=>next.classList.remove("page-entering")));
+
+  const token=++pageMotionToken;
+  const from=PAGE_ORDER[current?.id]??0,to=PAGE_ORDER[id]??from;
+  const forward=to>from;
+
+  document.querySelectorAll(".page").forEach(p=>{
+    if(p!==current&&p!==next)p.classList.remove("active","page-leaving","page-entering","motion-forward","motion-back");
+  });
+
+  if(current){
+    current.classList.remove("page-entering","motion-forward","motion-back");
+    current.classList.add("page-leaving",forward?"motion-forward":"motion-back");
+  }
+
+  next.classList.remove("page-leaving","page-entering","motion-forward","motion-back");
+  next.classList.add("active","page-entering",forward?"motion-forward":"motion-back");
+
   document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.page===id));
+
+  if(id==="finance")renderFinance();
+  if(id==="work")renderWork();
+  if(id==="planner")renderPlanner();
+  if(id==="settingsPage")renderSettingsPage();
+  hydrateIcons();
+
   window.scrollTo({top:0,behavior:"smooth"});
-  if(id==="finance")renderFinance();if(id==="work")renderWork();if(id==="planner")renderPlanner();if(id==="settingsPage")renderSettingsPage();hydrateIcons()
+
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    next.classList.remove("page-entering");
+  }));
+
+  setTimeout(()=>{
+    if(token!==pageMotionToken)return;
+    if(current)current.classList.remove("active","page-leaving","motion-forward","motion-back");
+    next.classList.remove("motion-forward","motion-back");
+  },330);
 };
 window.openFinanceTab=id=>{
   document.querySelectorAll(".finance-pane").forEach(x=>x.classList.remove("active"));$("finance-"+id).classList.add("active");
@@ -531,9 +564,55 @@ window.openPlannerTab=id=>{
 window.selectDate=iso=>{planner.selected=new Date(iso);planner.anchor=new Date(iso);renderPlanner()};
 window.shiftMonth=dir=>{const {start,end}=monthCells(planner.anchor);planner.anchor=dir>0?addDays(end,1):addDays(start,-1);planner.selected=planner.anchor;renderPlanner()};
 
-function openSheet(id){$(id).classList.add("show")}
-window.closeSheet=id=>$(id).classList.remove("show");
+const SHEET_MOTION_MS=300;
+let sheetFocusTimer=null;
+
+function focusSheetField(id,delay=SHEET_MOTION_MS-40){
+  clearTimeout(sheetFocusTimer);
+  sheetFocusTimer=setTimeout(()=>{
+    const el=$(id);
+    if(!el)return;
+    try{el.focus({preventScroll:true})}catch{el.focus()}
+  },delay)
+}
+function openSheet(id){
+  const el=$(id);if(!el)return;
+  el.classList.remove("closing");
+  // Ensures the browser paints the hidden state before transitioning in.
+  requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add("show")));
+}
+window.closeSheet=id=>{
+  const el=$(id);if(!el||!el.classList.contains("show"))return;
+  clearTimeout(sheetFocusTimer);
+  const active=document.activeElement;
+  if(active&&el.contains(active)&&typeof active.blur==="function")active.blur();
+  el.classList.add("closing");
+  el.classList.remove("show");
+  setTimeout(()=>el.classList.remove("closing"),SHEET_MOTION_MS+30);
+};
 window.closeOverlay=(e,id)=>{if(e.target.id===id)closeSheet(id)};
+
+window.openAmount=category=>{
+  const budget=state.budgets.find(x=>x.id===category);
+  if(!budget)return toast("دسته هزینه پیدا نشد.");
+  amountCategory=category;
+  $("amountCategoryTitle").textContent=budget.name;
+  $("amountInput").value="";
+  openSheet("amountSheet");
+  focusSheetField("amountInput");
+};
+window.saveQuickExpense=async()=>{
+  if(!amountCategory)return toast("اول دسته هزینه را انتخاب کن.");
+  const raw=$("amountInput").value.trim();
+  if(!raw)return toast("مبلغ هزینه را وارد کن.");
+  const amount=parseAmount(raw,"expense");
+  if(!amount||amount<=0)return toast("مبلغ واردشده معتبر نیست.");
+  const budget=state.budgets.find(x=>x.id===amountCategory);
+  const ok=await addExpense(amount,amountCategory,budget?.name||"ثبت سریع هزینه");
+  if(ok===false)return;
+  closeSheet("amountSheet");
+  amountCategory=null;
+};
 window.openSettings=()=>{switchPage("settingsPage");renderSettingsPage()};
 
 window.openQuick=(kind="",source="")=>{
@@ -541,7 +620,7 @@ window.openQuick=(kind="",source="")=>{
   if(kind==="income")$("quickInput").placeholder=`مثلاً: ۲۵ میلیون حقوق ${SOURCE_META[source]?.name||"هورسان"} واریز شد`;
   else if(kind==="expense")$("quickInput").placeholder="مثلاً: ۱۴۰ سیگار";
   else $("quickInput").placeholder="مثلاً: فردا سایت مشتری را اصلاح کنم\nیا: سه‌شنبه ساعت ۱۲ جلسه دارم";
-  openSheet("quickSheet");setTimeout(()=>$("quickInput").focus(),180)
+  openSheet("quickSheet");focusSheetField("quickInput")
 };
 window.prefillQuick=t=>{$("quickInput").value=t;$("quickInput").focus()};
 function parseAmount(text,context="expense"){
@@ -690,7 +769,7 @@ window.openAccount=id=>{
   $("accountSheetTitle").textContent=ACCOUNT_META[id].name;
   $("accountBankInput").value=a.bankName||"";
   $("accountBalanceInput").value=a.balance?(a.balance/1_000_000):"";
-  openSheet("accountSheet");setTimeout(()=>$("accountBalanceInput").focus(),120)
+  openSheet("accountSheet");focusSheetField("accountBalanceInput")
 };
 window.saveAccountBalance=async()=>{
   const raw=$("accountBalanceInput").value.trim();if(!raw)return toast("موجودی واقعی بانک را وارد کن.");
@@ -699,7 +778,7 @@ window.saveAccountBalance=async()=>{
   await load();renderAll();closeSheet("accountSheet");toast("موجودی و نام بانک هماهنگ شد ✓")
 };
 
-window.openEventSheet=()=>{editingEventId=null;$("eventModeLabel").textContent="برنامه جدید";$("eventSaveBtn").textContent="ثبت در تقویم";$("eventDateText").textContent=pFull(planner.selected);$("eventTitle").value="";$("eventTime").value="10:00";$("eventDuration").value="60";openSheet("eventSheet");setTimeout(()=>$("eventTitle").focus(),120)};
+window.openEventSheet=()=>{editingEventId=null;$("eventModeLabel").textContent="برنامه جدید";$("eventSaveBtn").textContent="ثبت در تقویم";$("eventDateText").textContent=pFull(planner.selected);$("eventTitle").value="";$("eventTime").value="10:00";$("eventDuration").value="60";openSheet("eventSheet");focusSheetField("eventTitle")};
 window.editEvent=id=>{const e=state.events.find(x=>x.id===id);if(!e)return;editingEventId=id;const d=new Date(e.startISO);planner.selected=new Date(d);planner.anchor=new Date(d);$("eventModeLabel").textContent="ویرایش برنامه";$("eventSaveBtn").textContent="ذخیره تغییرات";$("eventDateText").textContent=pFull(d);$("eventTitle").value=e.title;$("eventTime").value=`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;$("eventDuration").value=e.durationMin||60;openSheet("eventSheet")};
 window.saveEvent=async()=>{const title=$("eventTitle").value.trim();if(!title)return toast("عنوان را وارد کن.");const [h,m]=($("eventTime").value||"10:00").split(":").map(Number),d=new Date(planner.selected);d.setHours(h,m,0,0);const old=editingEventId?state.events.find(x=>x.id===editingEventId):null;await put("events",{...(old||{}),id:old?.id||now(),title,startISO:d.toISOString(),durationMin:+$("eventDuration").value||60,alertBeforeMin:60,type:old?.type||"event",createdAt:old?.createdAt||now(),updatedAt:now(),defaultThursday:false});editingEventId=null;await load();planner.selected=d;planner.anchor=d;renderAll();closeSheet("eventSheet");toast(old?"تغییرات برنامه ذخیره شد ✓":"در برنامه ثبت شد ✓")};
 window.deleteEvent=async id=>{
@@ -710,7 +789,7 @@ window.deleteEvent=async id=>{
   }
   await remove("events",id);await load();renderAll();toast("برنامه حذف شد")
 };
-window.openTaskSheet=()=>{$("taskTitle").value="";$("taskDateText").textContent=pFull(planner.selected);openSheet("taskSheet");setTimeout(()=>$("taskTitle").focus(),120)};
+window.openTaskSheet=()=>{$("taskTitle").value="";$("taskDateText").textContent=pFull(planner.selected);openSheet("taskSheet");focusSheetField("taskTitle")};
 window.saveTask=async()=>{const rawTitle=$("taskTitle").value.trim();if(!rawTitle)return;const title=normalizeWorkTitle(rawTitle),d=new Date(planner.selected);d.setHours(9,0,0,0);await put("tasks",{id:now(),title,rawTitle,time:pFull(d),dueISO:d.toISOString(),done:false,category:detectTaskCategory(`${rawTitle} ${title}`),createdAt:now()});await load();renderAll();closeSheet("taskSheet");toast(`«${title}» به فهرست کارها اضافه شد ✓`)};
 window.toggleTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;const category=t.category||detectTaskCategory(t.title);await put("tasks",{...t,category,done:true,doneAt:now()});await load();renderAll();toast(`انجام شد · در دسته «${TASK_CATEGORY_META[category].name}» ثبت شد ✓`)};
 window.reopenTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;await put("tasks",{...t,done:false,doneAt:null});await load();renderAll();openPlannerTab("tasks");toast("کار دوباره به فهرست باز برگشت")};
@@ -729,7 +808,7 @@ function renderSettingsPage(){
 }
 
 window.exportData=async()=>{
-  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.7",...state};
+  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.8",...state};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`MIA-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 };
 async function undoLast(){
@@ -740,6 +819,37 @@ function toast(text,actionText="",action=null){
   $("toastText").textContent=text;const b=$("toastAction");b.textContent=actionText;b.style.display=actionText?"block":"none";b.onclick=()=>{if(action)action();$("toast").classList.remove("show")};
   $("toast").classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>$("toast").classList.remove("show"),4200)
 }
+function installInteractionGuards(){
+  const editable=el=>!!el?.closest?.("input,textarea,select,[contenteditable='true']");
+
+  // Safari gesture events can still zoom even when viewport settings are strict.
+  ["gesturestart","gesturechange","gestureend"].forEach(type=>{
+    document.addEventListener(type,e=>e.preventDefault(),{passive:false})
+  });
+
+  // Prevent double-tap zoom while preserving normal taps and vertical scrolling.
+  let lastTouchEnd=0;
+  document.addEventListener("touchend",e=>{
+    if(editable(e.target))return;
+    const t=Date.now();
+    if(t-lastTouchEnd<=320)e.preventDefault();
+    lastTouchEnd=t;
+  },{passive:false});
+
+  // No copy/select/context menu for ordinary UI. Editing fields are exempt.
+  document.addEventListener("contextmenu",e=>{
+    if(!editable(e.target))e.preventDefault()
+  });
+  document.addEventListener("selectstart",e=>{
+    if(!editable(e.target))e.preventDefault()
+  });
+
+  // Enter submits the quick amount sheet.
+  $("amountInput")?.addEventListener("keydown",e=>{
+    if(e.key==="Enter"){e.preventDefault();saveQuickExpense()}
+  });
+}
+
 function wireMode(){
   const p=new URLSearchParams(location.search);
   if(p.get("mode")==="quick")setTimeout(()=>openQuick(),350);
