@@ -1499,111 +1499,71 @@ button:disabled{
 }
 [data-action]{-webkit-tap-highlight-color:transparent}
 
+/* ===== MIA v1.2.0 · cleaner hierarchy + manual finance control ===== */
+.home-primary-action{margin:10px 0 18px}
+.home-account-grid-clean{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.home-account-grid-clean .home-account-card{min-height:106px;padding:14px}
+.home-account-grid-clean .home-account-card small{font-size:8.5px}
+.home-task-card{margin-bottom:14px}
 
-/* ==========================================================
-   MIA v1.1.3 — Soft logo + Neon header identity
-   ========================================================== */
+.legacy-work-tabs{display:none!important}
+.work-source-picker{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 13px;margin-bottom:12px}
+.work-source-picker>div b{display:block;font-size:11px}
+.work-source-picker>div small{display:block;color:var(--muted);font-size:8px;margin-top:2px}
+.compact-select{width:145px;min-height:42px;padding:8px 11px!important;margin:0!important}
+.work-report-collapse{margin-top:12px;padding:0 13px;overflow:hidden}
+.work-report-collapse summary,.settings-collapse summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:58px}
+.work-report-collapse summary::-webkit-details-marker,.settings-collapse summary::-webkit-details-marker{display:none}
+.work-report-collapse summary>span:first-child b{display:block;font-size:11px}
+.work-report-collapse summary>span:first-child small{display:block;font-size:8px;color:var(--muted);margin-top:2px}
+.work-report-collapse summary>span:last-child{width:20px;height:20px;color:var(--muted);transition:transform .2s ease}
+.work-report-collapse[open] summary>span:last-child{transform:rotate(-90deg)}
+.work-stats-compact{margin:5px 0 10px}
+.report-list{padding-bottom:10px}
 
-.topbar .brand{
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  gap:12px;
-}
+.settings-profile-clean{margin-bottom:10px}
+.settings-cloud-compact{margin-bottom:10px}
+.settings-accordion{display:grid;gap:8px}
+.settings-collapse{padding:0 13px;overflow:hidden}
+.settings-collapse>summary>span:first-child{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:rgba(66,230,164,.06);color:var(--green)}
+.settings-collapse>summary>span:first-child svg{width:18px;height:18px}
+.settings-collapse>summary>div{flex:1}
+.settings-collapse>summary>div b{display:block;font-size:11px}
+.settings-collapse>summary>div small{display:block;color:var(--muted);font-size:8px;margin-top:2px}
+.settings-collapse>summary>span:last-child{width:19px;height:19px;color:var(--muted);transition:transform .2s ease}
+.settings-collapse[open]>summary>span:last-child{transform:rotate(-90deg)}
+.settings-collapse .settings-list{border-top:1px solid var(--line)}
+.settings-collapse .settings-static{border-top:1px solid var(--line);padding:13px 2px}
 
-.topbar .brand-mark.mia-logo-mark{
-  width:54px;
-  height:54px;
-  flex:0 0 54px;
-  border:0!important;
-  outline:0!important;
-  border-radius:22px!important;
-  background:transparent!important;
-  box-shadow:none!important;
-  overflow:visible!important;
-  isolation:isolate;
-}
+.tx-row{grid-template-columns:38px minmax(0,1fr) auto 34px!important;gap:8px!important}
+.tx-copy{min-width:0}.tx-copy b,.tx-copy small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx-manage{width:32px;height:32px;border-radius:11px;border:1px solid var(--line);background:rgba(255,255,255,.025);color:#a9c4bf;display:grid;place-items:center;padding:0}
+.tx-manage svg{width:15px;height:15px}
+.tx-manage:active{transform:scale(.94)}
 
-.topbar .brand-mark.mia-logo-mark::before,
-.topbar .brand-mark.mia-logo-mark::after{
-  content:none!important;
-  display:none!important;
-}
+.expense-description-input{min-height:105px!important;line-height:1.9!important;resize:none!important;margin-bottom:8px}
+.danger-ghost{color:#ff858c!important;border-color:rgba(255,107,115,.18)!important;background:rgba(255,107,115,.025)!important}
 
-.topbar .brand-mark.mia-logo-mark .mia-logo-img{
-  width:64px!important;
-  height:64px!important;
-  max-width:none!important;
-  margin:-5px;
-  object-fit:contain;
-  transform:none!important;
-  filter:
-    drop-shadow(0 0 5px rgba(57,215,232,.38))
-    drop-shadow(0 0 12px rgba(57,215,232,.20))
-    drop-shadow(0 6px 14px rgba(0,0,0,.18))!important;
-  opacity:.98;
-}
+.allocation-info{margin-bottom:10px}
+.allocation-info b{display:block;font-size:10px;color:#dffbf2}
+.allocation-info p{margin:4px 0 0;font-size:8px;color:var(--muted);line-height:1.8}
+.allocation-edit-row{display:grid;grid-template-columns:minmax(115px,.75fr) 1.25fr;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.allocation-edit-row:last-child{border-bottom:0}
+.allocation-edit-label b{display:flex;align-items:center;gap:7px;font-size:11px}
+.allocation-edit-label small{display:block;color:var(--muted);font-size:8px;margin-top:3px}
+.allocation-money{min-width:0}.allocation-money input{height:46px!important;font-size:15px!important}
+.allocation-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 12px;margin:9px 0 12px}
+.allocation-summary>div{display:grid;gap:2px}.allocation-summary span{font-size:8px;color:var(--muted)}.allocation-summary b{font-size:10px}
+.allocation-error{color:#ff858c!important}
 
-.topbar .brand-copy{
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-  justify-content:center;
-  text-align:right;
-  line-height:1;
-}
-
-.topbar .brand-title{
-  display:block;
-  margin:0;
-  padding:0;
-  color:#67f3ff;
-  font-size:27px!important;
-  font-weight:600!important;
-  letter-spacing:.15em;
-  line-height:1.05;
-  text-indent:.15em;
-  text-shadow:
-    0 0 4px rgba(103,243,255,.95),
-    0 0 10px rgba(57,215,232,.68),
-    0 0 20px rgba(57,215,232,.32);
-  filter:drop-shadow(0 2px 7px rgba(57,215,232,.16));
-}
-
-.topbar .brand-copy small{
-  display:block;
-  width:100%;
-  margin-top:9px;
-  color:#8aa8a3!important;
-  font-size:10px!important;
-  line-height:1.55;
-  letter-spacing:.015em;
-  white-space:nowrap;
-  text-align:justify;
-  text-align-last:right;
-  opacity:.94;
-}
+#transactionSourceField,#transactionCategoryField{margin-top:9px}
+#transactionEditNote{margin-bottom:8px}
 
 @media(max-width:390px){
-  .topbar .brand{gap:9px}
-  .topbar .brand-mark.mia-logo-mark{
-    width:49px;
-    height:49px;
-    flex-basis:49px;
-  }
-  .topbar .brand-mark.mia-logo-mark .mia-logo-img{
-    width:58px!important;
-    height:58px!important;
-    margin:-4px;
-  }
-  .topbar .brand-title{
-    font-size:24px!important;
-    letter-spacing:.13em;
-    text-indent:.13em;
-  }
-  .topbar .brand-copy small{
-    font-size:9px!important;
-    margin-top:7px;
-  }
+  .home-account-grid-clean{grid-template-columns:1fr 1fr}
+  .work-source-picker{align-items:flex-start}
+  .compact-select{width:132px}
+  .allocation-edit-row{grid-template-columns:105px 1fr;gap:7px}
+  .tx-row{grid-template-columns:34px minmax(0,1fr) auto 30px!important}
+  .tx-manage{width:29px;height:29px}
 }

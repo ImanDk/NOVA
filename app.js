@@ -1,18 +1,21 @@
 
-import {openDB,all,get,put,putQuiet,remove,snapshotDB,databaseHealth,pruneLogs} from "./db.js?v=110";
-import {pFull,pMonthTitle,pDayNum,pParts,pKey,monthCells,addDays,parseFaDigits,parseNaturalEvent,startOfWeek,startOfDay} from "./planner.js?v=110";
+import {openDB,all,get,put,putQuiet,remove,snapshotDB,databaseHealth,pruneLogs} from "./db.js?v=120";
+import {pFull,pMonthTitle,pDayNum,pParts,pKey,monthCells,addDays,parseFaDigits,parseNaturalEvent,startOfWeek,startOfDay} from "./planner.js?v=120";
 import {
   initCloudSync,getCloudSyncStatus,connectGitHub,syncNow,
   restoreFromGitHub,getRecoveryKey,setCloudAutoEnabled,disconnectCloud
-} from "./sync.js?v=110";
+} from "./sync.js?v=120";
 
-import {PROFILE_ID,PROFILE_NAME,newId,escapeHtml,actionExpr} from "./core.js?v=113";
-import {installActionDelegation} from "./actions.js?v=113";
-import {formatMoneyInteger,formatMoneyInputValue,bindMoneyInputs} from "./money-format.js?v=113";
-import {runPureSelfTests} from "./self-test.js?v=113";
-import {recordExpenseAtomic,recordIncomeAtomic,confirmAllocationAtomic,recordTransferAtomic,reconcileAccountAtomic,undoExpenseAtomic} from "./finance-store.js?v=113";
+import {PROFILE_ID,PROFILE_NAME,newId,escapeHtml,actionExpr} from "./core.js?v=120";
+import {installActionDelegation} from "./actions.js?v=120";
+import {formatMoneyInteger,formatMoneyInputValue,parseFormattedMoney,bindMoneyInputs} from "./money-format.js?v=120";
+import {runPureSelfTests} from "./self-test.js?v=120";
+import {
+  recordExpenseAtomic,recordIncomeAtomic,confirmAllocationAtomic,recordTransferAtomic,reconcileAccountAtomic,
+  undoExpenseAtomic,updateExpenseAtomic,updateIncomeAtomic,updateTransactionNoteAtomic,deleteFinancialTransactionAtomic
+} from "./finance-store.js?v=120";
 
-const APP_VERSION="1.1.3";
+const APP_VERSION="1.2.0";
 
 
 const $=id=>document.getElementById(id);
@@ -105,6 +108,7 @@ const EXPENSE_CATS=[
 let state={tasks:[],events:[],projects:[],projectTasks:[],transactions:[],accounts:[],reels:[],budgets:[],allocations:[],goals:[],profile:{profileId:PROFILE_ID,userName:PROFILE_NAME},hoorsunStage:{shoot:false,edit:false,upload:false}};
 let planner={anchor:new Date(),selected:new Date()};
 let amountCategory=null,editingAccount=null,pendingAllocation=null,lastUndo=null,prefillIncomeSource=null,editingEventId=null,stageLock=false;
+let pendingExpenseDraft=null,editingTransactionId=null;
 let appHealth={ok:true,lastCheck:0,issues:[]};
 let lastRenderFailures=0;
 let appInitialized=false;
@@ -380,9 +384,11 @@ function renderIncomeBreakdown(){
 function renderLastAllocation(){
   const a=[...state.allocations].sort((x,y)=>y.at-x.at)[0];
   if(!a){$("lastAllocation").innerHTML=empty("بعد از ثبت اولین درآمد، MIA تقسیم پیشنهادی می‌دهد.");return}
-  $("lastAllocation").innerHTML=["current","obligations","safe","growth"].map(id=>{
-    const x=a.parts[id];return `<div class="allocation-item account-accent-${id}"><div><b><i class="allocation-dot"></i>${ACCOUNT_META[id].name}</b><small>${fa(x.percent)}٪ از ${SOURCE_META[a.source]?.name||"درآمد"}</small></div><span>${toman(x.amount)}</span></div>`
+  const rows=["current","obligations","safe","growth"].map(id=>{
+    const x=a.parts?.[id]||{percent:0,amount:0};return `<div class="allocation-item account-accent-${id}"><div><b><i class="allocation-dot"></i>${ACCOUNT_META[id].name}</b><small>${fa(x.percent)}٪ از ${SOURCE_META[a.source]?.name||"درآمد"}</small></div><span>${toman(x.amount)}</span></div>`
   }).join("");
+  const action=a.confirmed?`<div class="allocation-state done"><span data-icon="check"></span> این تقسیم در دارایی‌ها ثبت شده است.</div>`:`<button class="ghost big allocation-review-btn" data-action="${actionExpr('openAllocationById',a.id)}">بررسی و تقسیم دستی</button>`;
+  $("lastAllocation").innerHTML=rows+action;
 }
 function renderGoals(){
   $("goalsList").innerHTML=state.goals.map(g=>{
@@ -412,7 +418,8 @@ function renderBudgets(){
 }
 function txRow(t){
   const name=t.type==="income"?(SOURCE_META[t.source]?.name||"درآمد"):(state.budgets.find(b=>b.id===t.category)?.name||"هزینه");
-  return `<div class="tx-row"><div class="tx-icon" data-icon="${t.type==="income"?"arrow-up":"arrow-down"}"></div><div><b>${esc(t.note||name)}</b><small>${name} · ${pFull(new Date(t.at))}</small></div><span class="tx-amount ${t.type}">${t.type==="income"?"+":"−"}${toman(t.amount)}</span></div>`
+  const status=t.type==="income"&&t.allocationStatus!=="confirmed"?" · تقسیم‌نشده":"";
+  return `<div class="tx-row"><div class="tx-icon" data-icon="${t.type==="income"?"arrow-up":"arrow-down"}"></div><div class="tx-copy"><b>${esc(t.note||name)}</b><small>${name}${status} · ${pFull(new Date(t.at))}</small></div><span class="tx-amount ${t.type}">${t.type==="income"?"+":"−"}${toman(t.amount)}</span><button class="tx-manage" data-action="${actionExpr('openTransactionEditor',t.id)}" aria-label="ویرایش یا حذف"><span data-icon="edit"></span></button></div>`
 }
 function renderWork(){
   const reels=currentCycleReels(),wr=weekReels(),pct=Math.min(100,reels.length/12*100),value=reels.length*(25_000_000/12);
@@ -823,7 +830,7 @@ function switchSubPane(group,id){
 }
 
 window.openFinanceTab=id=>switchSubPane("finance",id);
-window.openWorkTab=id=>switchSubPane("work",id);
+window.openWorkTab=id=>{const sel=$("workSourceSelect");if(sel&&sel.value!==id)sel.value=id;switchSubPane("work",id)};
 
 const PLANNER_TAB_ORDER={calendar:0,tasks:1,done:2};
 let plannerTabToken=0;
@@ -978,6 +985,7 @@ window.openAmount=category=>{
   const budget=state.budgets.find(x=>x.id===category);
   if(!budget)return toast("دسته هزینه پیدا نشد.");
   amountCategory=category;
+  pendingExpenseDraft=null;
   $("amountCategoryTitle").textContent=budget.name;
   $("amountInput").value="";
   openSheet("amountSheet");
@@ -987,13 +995,27 @@ window.saveQuickExpense=async()=>{
   if(!amountCategory)return toast("اول دسته هزینه را انتخاب کن.");
   const raw=$("amountInput").value.trim();
   if(!raw)return toast("مبلغ هزینه را وارد کن.");
-  const amount=parseAmount(raw,"expense");
+  const amount=parseFormattedMoney(raw)||parseAmount(raw,"expense");
   if(!amount||amount<=0)return toast("مبلغ واردشده معتبر نیست.");
   const budget=state.budgets.find(x=>x.id===amountCategory);
-  const ok=await addExpense(amount,amountCategory,budget?.name||"ثبت سریع هزینه");
-  if(ok===false)return;
+  if(amountCategory==="cigarette"){
+    const ok=await addExpense(amount,amountCategory,"سیگار");
+    if(ok===false)return;
+    closeSheet("amountSheet");amountCategory=null;pendingExpenseDraft=null;return
+  }
+  pendingExpenseDraft={amount,category:amountCategory};
+  $("expenseDescriptionTitle").textContent=budget?.name||"هزینه";
+  $("expenseDescriptionInput").value="";
   closeSheet("amountSheet");
-  amountCategory=null;
+  setTimeout(()=>{openSheet("expenseDescriptionSheet");focusSheetField("expenseDescriptionInput")},190)
+};
+window.saveExpenseDescription=async()=>{
+  const draft=pendingExpenseDraft;if(!draft)return closeSheet("expenseDescriptionSheet");
+  const note=$("expenseDescriptionInput").value.trim();
+  if(!note)return toast("برای این هزینه یک شرح کوتاه و دقیق بنویس.");
+  const ok=await addExpense(draft.amount,draft.category,note);
+  if(ok===false)return;
+  pendingExpenseDraft=null;amountCategory=null;closeSheet("expenseDescriptionSheet")
 };
 window.openSettings=()=>{switchPage("settingsPage");renderSettingsPage()};
 
@@ -1119,16 +1141,100 @@ function buildAllocation(amount){
   return Object.fromEntries(Object.entries(normalized).map(([id,percent])=>[id,{percent,amount:Math.round(amount*percent/100)}]))
 }
 function showAllocation(a){
-  $("allocationTitle").textContent=`پیشنهاد تقسیم ${toman(a.amount)} ${SOURCE_META[a.source]?.name||""} · بر اساس موجودی فعلی`;
-  $("allocationRows").innerHTML=["current","obligations","safe","growth"].map(id=>`<div class="allocation-item account-accent-${id}"><div><b><i class="allocation-dot"></i>${ACCOUNT_META[id].name}</b><small>${fa(a.parts[id].percent)}٪</small></div><span>${toman(a.parts[id].amount)}</span></div>`).join("");
+  pendingAllocation=a;
+  $("allocationTitle").textContent=`${SOURCE_META[a.source]?.name||"درآمد"} · ${toman(a.amount)}`;
+  $("allocationRows").innerHTML=["current","obligations","safe","growth"].map(id=>{
+    const part=a.parts?.[id]||{percent:0,amount:0};
+    return `<div class="allocation-edit-row account-accent-${id}"><div class="allocation-edit-label"><b><i class="allocation-dot"></i>${ACCOUNT_META[id].name}</b><small data-allocation-percent="${id}">${fa(part.percent||0)}٪ پیشنهاد</small></div><div class="money-input allocation-money"><input data-allocation-account="${id}" data-money-input="true" inputmode="numeric" value="${formatMoneyInputValue(String(Math.round(part.amount||0)))}"><span>تومان</span></div></div>`
+  }).join("");
+  bindMoneyInputs($("allocationRows"));
+  $("allocationRows").querySelectorAll("[data-allocation-account]").forEach(input=>input.addEventListener("input",updateAllocationSummary));
+  updateAllocationSummary();
   openSheet("allocationSheet")
+}
+function allocationInputParts(){
+  const a=pendingAllocation;if(!a)return{};
+  const amount=Number(a.amount)||0;
+  const parts={};
+  ["current","obligations","safe","growth"].forEach(id=>{
+    const input=document.querySelector(`[data-allocation-account="${id}"]`),value=Math.max(0,Math.round(parseFormattedMoney(input?.value||"0")));
+    parts[id]={amount:value,percent:amount?Math.round(value/amount*100):0}
+  });
+  return parts
+}
+function updateAllocationSummary(){
+  const a=pendingAllocation;if(!a)return;
+  const parts=allocationInputParts(),total=Object.values(parts).reduce((s,x)=>s+x.amount,0),remain=Math.round(Number(a.amount||0)-total);
+  Object.entries(parts).forEach(([id,p])=>{const el=document.querySelector(`[data-allocation-percent="${id}"]`);if(el)el.textContent=`${fa(p.percent)}٪`});
+  if($("allocationEntered"))$("allocationEntered").textContent=toman(total);
+  if($("allocationRemain")){
+    $("allocationRemain").textContent=remain===0?"تقسیم کامل":remain>0?`${toman(remain)} تخصیص‌نیافته`:`${toman(Math.abs(remain))} بیشتر از درآمد`;
+    $("allocationRemain").classList.toggle("allocation-error",remain<0)
+  }
+  const btn=$("allocationConfirmBtn");if(btn)btn.disabled=Math.abs(remain)>1
 }
 window.confirmAllocation=async()=>{
   const a=pendingAllocation||[...state.allocations].sort((x,y)=>y.at-x.at).find(x=>!x.confirmed);if(!a)return closeSheet("allocationSheet");
   try{
-    await confirmAllocationAtomic(a.id);pendingAllocation=null;await load();renderAll();closeSheet("allocationSheet");toast("تقسیم درآمد با موجودی چهار حساب هماهنگ شد ✓")
-  }catch(err){toast(err.message||"تأیید تقسیم درآمد انجام نشد.")}
+    const parts=allocationInputParts();
+    await confirmAllocationAtomic(a.id,parts);pendingAllocation=null;await load();renderAll();closeSheet("allocationSheet");toast("مبالغ انتخابی به چهار دارایی اضافه شد ✓")
+  }catch(err){toast(err.message||"ثبت تقسیم درآمد انجام نشد.")}
 };
+window.deferAllocation=()=>{pendingAllocation=null;closeSheet("allocationSheet");toast("درآمد ثبت شد؛ هیچ مبلغی به دارایی‌ها اضافه نشد.")};
+window.openAllocationById=id=>{const a=state.allocations.find(x=>x.id===id);if(!a)return toast("پیشنهاد تقسیم پیدا نشد.");if(a.confirmed)return toast("این تقسیم قبلاً در دارایی‌ها ثبت شده است.");showAllocation(a)};
+
+window.openTransactionEditor=id=>{
+  const t=state.transactions.find(x=>x.id===id);if(!t||!["income","expense"].includes(t.type))return toast("این مورد قابل ویرایش نیست.");
+  editingTransactionId=id;
+  $("transactionEditAccent").textContent=t.type==="income"?"ویرایش واریز":"ویرایش برداشت";
+  $("transactionEditTitle").textContent=t.type==="income"?(SOURCE_META[t.source]?.name||"درآمد"):(state.budgets.find(b=>b.id===t.category)?.name||"هزینه");
+  $("transactionEditAmount").value=formatMoneyInputValue(String(Math.round(t.amount||0)));
+  $("transactionEditNote").value=t.note||"";
+  $("transactionSourceField").hidden=t.type!=="income";
+  $("transactionCategoryField").hidden=t.type!=="expense";
+  $("transactionEditSource").value=t.source||"other";
+  $("transactionEditCategory").value=t.category||"other";
+  openSheet("transactionEditSheet");bindMoneyInputs($("transactionEditSheet"));focusSheetField("transactionEditNote")
+};
+window.saveTransactionEdit=async()=>{
+  const t=state.transactions.find(x=>x.id===editingTransactionId);if(!t)return closeSheet("transactionEditSheet");
+  const amount=Math.round(parseFormattedMoney($("transactionEditAmount").value));
+  if(amount<=0)return toast("مبلغ معتبر وارد کن.");
+  const note=$("transactionEditNote").value.trim();
+  if(t.type==="expense"&&t.category!=="cigarette"&&!note)return toast("برای این هزینه شرح را وارد کن.");
+  try{
+    if(t.type==="expense"){
+      const category=$("transactionEditCategory").value||t.category;
+      await updateExpenseAtomic({txId:t.id,amount,category,note:note||"سیگار"});
+      await load();renderAll();closeSheet("transactionEditSheet");editingTransactionId=null;toast("هزینه و موجودی حساب اصلاح شد ✓");return
+    }
+    const source=$("transactionEditSource").value||t.source||"other";
+    if(amount===Math.round(Number(t.amount||0))){
+      await updateTransactionNoteAtomic({txId:t.id,note,source});
+      await load();renderAll();closeSheet("transactionEditSheet");editingTransactionId=null;toast("اطلاعات واریز ویرایش شد ✓");return
+    }
+    const parts=buildAllocation(amount);
+    const allocation=await updateIncomeAtomic({txId:t.id,amount,source,note,parts});
+    await load();renderAll();closeSheet("transactionEditSheet");editingTransactionId=null;
+    setTimeout(()=>showAllocation(allocation),190)
+  }catch(err){toast(err.message||"ویرایش تراکنش انجام نشد.")}
+};
+window.deleteEditingTransaction=async()=>{
+  const t=state.transactions.find(x=>x.id===editingTransactionId);if(!t)return;
+  const label=t.type==="income"?"این واریز":"این برداشت";
+  if(!confirm(`${label} حذف شود؟ موجودی حساب‌های مرتبط هم اصلاح می‌شود.`))return;
+  try{
+    await deleteFinancialTransactionAtomic(t.id);editingTransactionId=null;await load();renderAll();closeSheet("transactionEditSheet");toast("تراکنش حذف و موجودی‌ها اصلاح شد ✓")
+  }catch(err){toast(err.message||"حذف تراکنش انجام نشد.")}
+};
+window.resetAccountBalance=async()=>{
+  if(!editingAccount)return;
+  const meta=ACCOUNT_META[editingAccount];
+  if(!confirm(`موجودی «${meta?.name||"این حساب"}» صفر شود؟ خود حساب حذف نمی‌شود.`))return;
+  try{await reconcileAccountAtomic({accountId:editingAccount,balance:0,bankName:$("accountBankInput").value.trim(),note:"صفر کردن دستی موجودی"});await load();renderAll();closeSheet("accountSheet");toast("موجودی حساب صفر شد ✓")}
+  catch(err){toast(err.message||"صفر کردن موجودی انجام نشد.")}
+};
+
 async function addReel(note){
   const reels=currentCycleReels();if(reels.length>=12)return toast("چرخه ۱۲ ریلزی کامل شده؛ از بخش تنظیمات، چرخه جدید را شروع کن.");
   await put("reels",{id:newId("reel"),at:now(),status:"delivered",note,archived:false});await load();renderAll();
@@ -1518,10 +1624,11 @@ function installInteractionGuards(){
     if(!editable(e.target))e.preventDefault()
   });
 
-  // Enter submits the quick amount sheet.
+  // Enter confirms the amount, then non-cigarette expenses continue to description.
   $("amountInput")?.addEventListener("keydown",e=>{
     if(e.key==="Enter"){e.preventDefault();saveQuickExpense()}
   });
+  $("workSourceSelect")?.addEventListener("change",e=>openWorkTab(e.target.value));
 }
 
 function wireMode(){

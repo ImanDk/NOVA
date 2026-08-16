@@ -1,4 +1,4 @@
-راه‌اندازی GitHub Cloud Backup برای MIA v1.1.0 Final Hardened
+راه‌اندازی GitHub Cloud Backup برای MIA v1.2.0
 
 حساب MIA:
 Iman Dk

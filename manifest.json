@@ -1,7 +1,7 @@
 {
   "name": "MIA — دستیار Iman Dk",
   "short_name": "MIA",
-  "description": "MIA v1.1.3 — soft frameless logo and neon header identity",
+  "description": "MIA v1.2.0 — manual income allocation, editable financial records, cleaner focused interface",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

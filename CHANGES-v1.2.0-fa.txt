@@ -1,0 +1,14 @@
+MIA v1.2.0
+
+- Income Recognition -> Proposal -> Manual Edit -> Explicit Apply
+- No automatic asset mutation when income is first recorded
+- Editable four-account allocation with live total/remainder validation
+- Deferred allocation supported
+- Income/expense edit and delete controls added to transaction rows
+- Account balance can be manually reconciled or zeroed
+- Expense description step added after amount for every category except cigarette
+- Home decluttered to Quick Entry + Assets + Today
+- Work tabs replaced visually by compact source selector
+- Hoorsun history collapsed under report section
+- Settings converted to collapsed groups
+- Cache/version bumped to 1.2.0 while keeping DB v3 for data compatibility
