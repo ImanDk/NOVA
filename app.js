@@ -6,13 +6,13 @@ import {
   restoreFromGitHub,getRecoveryKey,setCloudAutoEnabled,disconnectCloud
 } from "./sync.js?v=110";
 
-import {PROFILE_ID,PROFILE_NAME,newId,escapeHtml,actionExpr} from "./core.js?v=112";
-import {installActionDelegation} from "./actions.js?v=112";
-import {formatMoneyInteger,formatMoneyInputValue,bindMoneyInputs} from "./money-format.js?v=112";
-import {runPureSelfTests} from "./self-test.js?v=112";
-import {recordExpenseAtomic,recordIncomeAtomic,confirmAllocationAtomic,recordTransferAtomic,reconcileAccountAtomic,undoExpenseAtomic} from "./finance-store.js?v=112";
+import {PROFILE_ID,PROFILE_NAME,newId,escapeHtml,actionExpr} from "./core.js?v=113";
+import {installActionDelegation} from "./actions.js?v=113";
+import {formatMoneyInteger,formatMoneyInputValue,bindMoneyInputs} from "./money-format.js?v=113";
+import {runPureSelfTests} from "./self-test.js?v=113";
+import {recordExpenseAtomic,recordIncomeAtomic,confirmAllocationAtomic,recordTransferAtomic,reconcileAccountAtomic,undoExpenseAtomic} from "./finance-store.js?v=113";
 
-const APP_VERSION="1.1.2";
+const APP_VERSION="1.1.3";
 
 
 const $=id=>document.getElementById(id);

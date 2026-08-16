@@ -1,23 +1,16 @@
-MIA v1.1.2 — New Approved Logo
+MIA v1.1.3 — Neon Header
 
-لوگوی نهایی تاییدشده MIA به هویت اصلی نرم‌افزار تبدیل شد.
-
-محل‌های اعمال:
-- لوگوی اصلی Header
-- پروفایل Settings
-- کارت حساب Iman Dk / Cloud Sync
-- آیکون PWA 192×192
-- آیکون PWA 512×512
-- Apple Touch Icon
-- Browser Favicon
-
-نکته:
-- دکمه +MIA عمداً علامت + را حفظ کرده چون یک Action است، نه محل نمایش هویت برند.
-- لوگوی داخل رابط با بک‌گراند شفاف ساخته شده تا با تم سبز/مشکی MIA یکپارچه شود.
-- آیکون نصب PWA نسخه تیره اصلی لوگو را حفظ می‌کند.
+تغییرات فقط در هویت بصری هدر:
+- پس‌زمینه/حاشیه مربعی اطراف لوگو حذف شده.
+- PNG لوگو دوباره با Alpha تمیزتر ساخته شده تا لبه‌های مربع دیده نشوند.
+- Glow لوگو نرم‌تر و طبیعی‌تر شده.
+- نوشته MIA به حالت نئونی Cyan تبدیل شده.
+- فاصله حروف و تراز لوگو/عنوان بازطراحی شده.
+- زیرعنوان Iman Dk مرتب‌تر و Justified/راست‌تراز شده.
+- سایر بخش‌های UI بدون تغییر باقی مانده‌اند.
 
 Test:
-https://imandk.github.io/NOVA/?v=112
+https://imandk.github.io/NOVA/?v=113
 
 Quick Entry:
-https://imandk.github.io/NOVA/?mode=quick&v=112
+https://imandk.github.io/NOVA/?mode=quick&v=113
