@@ -104,7 +104,7 @@ async function init(){
   await openDB();await seed();await load();await ensureDefaultThursdays();await load();
   $("todayLabel").textContent=pFull(new Date());
   renderAll();installInteractionGuards();wireMode();
-  $("dbStatus").textContent="MIA v0.9.2 آماده است";
+  $("dbStatus").textContent="MIA v0.9.3 آماده است";
 }
 async function seed(){
   for(const [id,m] of Object.entries(ACCOUNT_META)){
@@ -476,7 +476,7 @@ function doneRow(t){
     </div>
     <div class="done-actions">
       <button class="mini-action" onclick="reopenTask(${JSON.stringify(t.id)})" aria-label="بازگردانی"><span data-icon="rotate-ccw"></span></button>
-      <button class="mini-action danger" onclick="deleteTask(${JSON.stringify(t.id)})" aria-label="حذف"><span data-icon="trash"></span></button>
+      <button class="mini-action danger done-delete-btn" onclick="deleteCompletedTask(${JSON.stringify(t.id)})" aria-label="حذف کار انجام‌شده"><span data-icon="trash"></span></button>
     </div>
   </article>`
 }
@@ -657,10 +657,53 @@ function switchSubPane(group,id){
 window.openFinanceTab=id=>switchSubPane("finance",id);
 window.openWorkTab=id=>switchSubPane("work",id);
 
+const PLANNER_TAB_ORDER={calendar:0,tasks:1,done:2};
+let plannerTabToken=0;
+
 window.openPlannerTab=id=>{
-  document.querySelectorAll(".planner-pane").forEach(x=>x.classList.remove("active"));$("planner-"+id).classList.add("active");
-  document.querySelectorAll(".planner-main-tabs button").forEach(b=>b.classList.toggle("active",b.dataset.ptab===id));
-  if(id==="done"||id==="tasks")renderTasks()
+  const current=document.querySelector(".planner-pane.active"),next=$("planner-"+id);
+  if(!next||current===next)return;
+
+  const token=++plannerTabToken;
+  const currentId=current?.id?.replace("planner-","")||id;
+  const from=PLANNER_TAB_ORDER[currentId]??0,to=PLANNER_TAB_ORDER[id]??from;
+  const forward=to>from;
+
+  document.querySelectorAll(".planner-main-tabs button").forEach(b=>{
+    const active=b.dataset.ptab===id;
+    b.classList.toggle("active",active);
+    if(active){
+      b.classList.remove("tab-pop");
+      void b.offsetWidth;
+      b.classList.add("tab-pop");
+    }
+  });
+
+  if(current){
+    current.classList.remove("pane-entering","pane-forward","pane-back");
+    current.classList.add("pane-leaving",forward?"pane-forward":"pane-back");
+  }
+
+  setTimeout(()=>{
+    if(token!==plannerTabToken)return;
+    if(current)current.classList.remove("active","pane-leaving","pane-forward","pane-back");
+
+    next.classList.remove("pane-leaving","pane-entering","pane-forward","pane-back");
+    next.classList.add("active","pane-entering",forward?"pane-forward":"pane-back");
+
+    if(id==="done"||id==="tasks")renderTasks();
+    if(id==="calendar")renderPlanner();
+
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      next.classList.remove("pane-entering");
+      hydrateIcons();
+    }));
+
+    setTimeout(()=>{
+      if(token!==plannerTabToken)return;
+      next.classList.remove("pane-forward","pane-back");
+    },260);
+  },85);
 };
 
 function calendarDayItems(d){
@@ -970,6 +1013,19 @@ window.saveTask=async()=>{
 };
 window.toggleTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;const category=t.category||detectTaskCategory(t.title);await put("tasks",{...t,category,done:true,doneAt:now()});await load();renderAll();toast(`انجام شد · در دسته «${TASK_CATEGORY_META[category].name}» ثبت شد ✓`)};
 window.reopenTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;await put("tasks",{...t,done:false,doneAt:null});await load();renderAll();openPlannerTab("tasks");toast("کار دوباره به فهرست باز برگشت")};
+window.deleteCompletedTask=async id=>{
+  const t=state.tasks.find(x=>x.id===id);if(!t)return;
+  if(!t.done)return deleteTask(id);
+  if(!confirm(`کار انجام‌شده «${t.title}» برای همیشه حذف شود؟`))return;
+
+  await remove("tasks",id);
+  await load();
+  renderAll();
+  renderTasks();
+  renderInlineDayItems();
+  toast("کار انجام‌شده حذف شد")
+};
+
 window.deleteTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;if(!confirm(`«${t.title}» حذف شود؟`))return;await remove("tasks",id);await load();renderAll();renderInlineDayItems();toast("کار حذف شد")};
 window.openProjectSheet=()=>{$("projectTitle").value="";$("projectValue").value="";openSheet("projectSheet")};
 window.saveProject=async()=>{const title=$("projectTitle").value.trim();if(!title)return toast("نام پروژه را وارد کن.");const value=parseAmount($("projectValue").value,"income");await put("projects",{id:now(),title,value,status:"فعال",createdAt:now()});await load();renderAll();closeSheet("projectSheet");toast("پروژه فریلنس ساخته شد ✓")};
@@ -985,7 +1041,7 @@ function renderSettingsPage(){
 }
 
 window.exportData=async()=>{
-  const data={exportedAt:new Date().toISOString(),version:"MIA 0.9.2",...state};
+  const data={exportedAt:new Date().toISOString(),version:"MIA 0.9.3",...state};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`MIA-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 };
 async function undoLast(){

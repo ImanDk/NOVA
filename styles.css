@@ -1170,3 +1170,131 @@ input,textarea,select{
     font-size:8px;
   }
 }
+
+
+/* ==========================================================
+   MIA v0.9.3 — Planner tabs + Done delete
+   ========================================================== */
+
+/* Planner tabs now match Finance and Work interactions */
+.planner-subtabs{
+  position:relative;
+  overflow-x:auto;
+  scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
+}
+.planner-subtabs::-webkit-scrollbar{display:none}
+.planner-subtabs button{
+  position:relative;
+  overflow:hidden;
+  cursor:pointer;
+  transition:
+    color .22s ease,
+    background-color .22s ease,
+    transform .18s cubic-bezier(.2,.75,.2,1),
+    box-shadow .22s ease!important;
+}
+.planner-subtabs button::before{
+  content:"";
+  position:absolute;
+  inset:3px;
+  border-radius:10px;
+  background:linear-gradient(145deg,rgba(66,230,164,.10),rgba(57,215,232,.07));
+  opacity:0;
+  transform:scale(.92);
+  transition:opacity .2s ease,transform .2s ease;
+  z-index:-1;
+}
+.planner-subtabs button::after{
+  content:"";
+  position:absolute;
+  right:23%;
+  left:23%;
+  bottom:4px;
+  height:2px;
+  border-radius:99px;
+  background:linear-gradient(90deg,var(--green),var(--cyan));
+  opacity:0;
+  transform:scaleX(.35);
+  transition:opacity .22s ease,transform .24s cubic-bezier(.2,.8,.2,1);
+}
+.planner-subtabs button.active::after{
+  opacity:.9;
+  transform:scaleX(1);
+}
+.planner-subtabs button.active{
+  color:var(--text)!important;
+  box-shadow:inset 0 0 0 1px rgba(66,230,164,.16),0 7px 18px rgba(0,0,0,.12)!important;
+}
+@media(hover:hover) and (pointer:fine){
+  .planner-subtabs button:not(.active):hover{
+    color:#d9f3ed;
+    transform:translateY(-1px);
+  }
+  .planner-subtabs button:not(.active):hover::before{
+    opacity:1;
+    transform:scale(1);
+  }
+}
+.planner-subtabs button:active{
+  transform:scale(.965)!important;
+}
+.planner-subtabs button.tab-pop{
+  animation:miaPlannerTabPop .28s cubic-bezier(.22,.82,.25,1) both;
+}
+@keyframes miaPlannerTabPop{
+  0%{transform:scale(.965)}
+  55%{transform:scale(1.018)}
+  100%{transform:scale(1)}
+}
+
+/* Smooth content change between Calendar / Open / Done */
+.planner-pane{
+  transform-origin:50% 8%;
+}
+.planner-pane.pane-leaving{
+  display:block!important;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .085s ease,transform .085s ease;
+}
+.planner-pane.pane-leaving.pane-forward{
+  transform:translate3d(8px,-1px,0) scale(.997);
+}
+.planner-pane.pane-leaving.pane-back{
+  transform:translate3d(-8px,-1px,0) scale(.997);
+}
+.planner-pane.active.pane-entering{
+  opacity:0;
+}
+.planner-pane.active.pane-entering.pane-forward{
+  transform:translate3d(-12px,4px,0) scale(.995);
+}
+.planner-pane.active.pane-entering.pane-back{
+  transform:translate3d(12px,4px,0) scale(.995);
+}
+.planner-pane.active:not(.pane-entering){
+  opacity:1;
+  transform:translate3d(0,0,0) scale(1);
+  transition:
+    opacity .22s ease,
+    transform .25s cubic-bezier(.22,.8,.22,1);
+}
+
+/* Explicit completed-task delete */
+.done-delete-btn{
+  color:#ff7f85!important;
+  border-color:rgba(255,107,115,.18)!important;
+  background:rgba(255,107,115,.035)!important;
+}
+.done-delete-btn:active{
+  transform:scale(.91)!important;
+  background:rgba(255,107,115,.09)!important;
+}
+@media(hover:hover) and (pointer:fine){
+  .done-delete-btn:hover{
+    background:rgba(255,107,115,.10)!important;
+    border-color:rgba(255,107,115,.32)!important;
+    transform:translateY(-1px);
+  }
+}
