@@ -100,7 +100,7 @@
   </div>
 
   <div class="finance-pane active" id="finance-overview">
-    <div class="section-head"><h2>چهار حساب</h2><span>هر کارت = یک بانک واقعی</span></div>
+    <div class="section-head"><h2>چهار حساب</h2><span>هر کارت = یک بانک واقعی و مستقل</span></div>
     <div class="money-accounts" id="financeAccounts"></div>
 
     <div class="section-head"><h2>درآمد این ماه</h2><span id="incomeMonthTotal">۰ تومان</span></div>
@@ -215,7 +215,7 @@
       <div class="week-labels"><span>ش</span><span>ی</span><span>د</span><span>س</span><span>چ</span><span>پ</span><span>ج</span></div>
       <div class="month-grid" id="monthGrid"></div>
     </div>
-    <div class="section-head"><h2 id="selectedDate"></h2><button onclick="openEventSheet()">+ برنامه</button></div>
+    <div class="section-head"><div><h2 id="selectedDate"></h2><small class="selected-day-help">کارها و برنامه‌های همین روز</small></div><button onclick="openEventSheet()">+ برنامه</button></div>
     <div class="panel timeline" id="dayEvents"></div>
   </div>
 
@@ -252,7 +252,7 @@
 
   <div class="settings-group-title">داده‌ها و ابزارها</div>
   <div class="panel settings-list">
-    <a class="settings-row" href="setup-ios.html"><span class="settings-row-icon" data-icon="smartphone"></span><div><b>Action Button و یادآوری شبانه</b><small>راهنمای تنظیم iPhone</small></div><span data-icon="chevron-left"></span></a>
+    <a class="settings-row" href="setup-ios.html"><span class="settings-row-icon" data-icon="smartphone"></span><div><b>Action Button و یادآوری ۰۰:۰۰</b><small>Quick Entry + یادآوری روزانه از خود iPhone</small></div><span data-icon="chevron-left"></span></a>
     <button class="settings-row" onclick="exportData()"><span class="settings-row-icon blue-icon" data-icon="download"></span><div><b>پشتیبان‌گیری از داده‌ها</b><small>دانلود نسخه JSON اطلاعات MIA</small></div><span data-icon="chevron-left"></span></button>
     <button class="settings-row" onclick="resetHoorsunCycle()"><span class="settings-row-icon purple-icon" data-icon="rotate-ccw"></span><div><b>شروع چرخه جدید هورسان</b><small>آرشیو چرخه فعلی و شروع ۱۲ ریلز جدید</small></div><span data-icon="chevron-left"></span></button>
   </div>
@@ -305,7 +305,7 @@
 <div class="overlay" id="allocationSheet" onclick="closeOverlay(event,'allocationSheet')">
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="handle"></div><div class="sheet-title"><div><span class="accent">تقسیم درآمد</span><h2 id="allocationTitle">پیشنهاد MIA</h2></div><button onclick="closeSheet('allocationSheet')">×</button></div>
-    <p class="muted">پول را خودت بین چهار بانک جابه‌جا کن؛ سپس «انجام شد» را بزن تا موجودی MIA هم هماهنگ شود.</p>
+    <p class="muted">MIA مبلغ و درصد پیشنهادی را حساب می‌کند. انتقال واقعی را خودت بین چهار بانک انجام بده؛ بعد «انجام شد» را بزن.</p>
     <div id="allocationRows"></div>
     <button class="primary big" onclick="confirmAllocation()">انتقال‌ها انجام شد</button>
     <button class="ghost big" onclick="closeSheet('allocationSheet')">بعداً انجام می‌دهم</button>
@@ -316,9 +316,12 @@
 <div class="overlay" id="accountSheet" onclick="closeOverlay(event,'accountSheet')">
   <div class="sheet" onclick="event.stopPropagation()">
     <div class="handle"></div><div class="sheet-title"><div><span class="accent">تطبیق با بانک</span><h2 id="accountSheetTitle"></h2></div><button onclick="closeSheet('accountSheet')">×</button></div>
-    <label class="field-label">موجودی واقعی بانک</label>
+    <label class="field-label">نام بانک / کارت این حساب</label>
+    <input class="text-input" id="accountBankInput" placeholder="مثلاً ملت، پاسارگاد، سامان...">
+    <label class="field-label account-balance-label">موجودی واقعی بانک</label>
     <div class="money-input"><input id="accountBalanceInput" inputmode="decimal"><span>تومان</span></div>
-    <button class="primary big" onclick="saveAccountBalance()">به‌روزرسانی موجودی</button>
+    <p class="muted account-note">این عدد فقط موجودی همین Stage را اصلاح می‌کند و درآمد یا هزینه جدید محسوب نمی‌شود.</p>
+    <button class="primary big" onclick="saveAccountBalance()">ذخیره و تطبیق با بانک</button>
   </div>
 </div>
 

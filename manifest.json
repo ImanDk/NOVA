@@ -1,7 +1,7 @@
 {
-  "name": "MIA — دستیار شخصی ایمان",
+  "name": "MIA — دستیار مالی و کاری ایمان",
   "short_name": "MIA",
-  "description": "MIA v0.8.2 — داشبورد مالی، کاری و برنامه‌ریزی",
+  "description": "MIA v0.8.3 — نسخه کامل مالی، هورسان، تقویم و Quick Entry",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
