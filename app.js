@@ -104,7 +104,7 @@ async function init(){
   await openDB();await seed();await load();await ensureDefaultThursdays();await load();
   $("todayLabel").textContent=pFull(new Date());
   renderAll();wireMode();
-  $("dbStatus").textContent="MIA v0.8.6 آماده است";
+  $("dbStatus").textContent="MIA v0.8.7 آماده است";
 }
 async function seed(){
   for(const [id,m] of Object.entries(ACCOUNT_META)){
@@ -153,20 +153,9 @@ function daysToNextPay(){
 function renderAll(){renderHome();renderFinance();renderWork();renderPlanner();renderTasks();renderProjects();renderSettingsPage();renderNotificationBadge();hydrateIcons()}
 function renderHome(){
   const curr=account("current").balance;
-  const days=daysToNextPay(),daily=curr/days;
   const reels=currentCycleReels(),wr=weekReels(),reelPct=Math.min(100,reels.length/12*100);
   const open=state.tasks.filter(t=>!t.done&&isSameDay(taskDate(t),new Date())).sort((a,b)=>taskDate(a)-taskDate(b));
-  let insight="امروز وضعیتت تحت کنترل است.";
-  const needWeek=Math.max(0,3-wr.length),totalAccounts=["current","obligations","safe","growth"].reduce((s,id)=>s+account(id).balance,0);
-  if(curr<=0&&totalAccounts>0)insight="حساب جاری خالی است؛ قبل از خرج بعدی، موجودی حساب‌ها را بررسی کن.";
-  else if(curr>0&&daily<500_000)insight="بودجه روزانه محدود شده؛ هزینه‌های اختیاری را کمتر کن.";
-  else if(open.length)insight=`اول «${open[0].title}» را انجام بده.`;
-  else if(needWeek>0)insight=`برای هدف هورسان، این هفته ${fa(needWeek)} ریلز دیگر تکمیل کن.`;
-  else{
-    const nextTask=state.tasks.filter(t=>!t.done).sort((a,b)=>taskDate(a)-taskDate(b))[0];
-    if(nextTask)insight=`کار بعدی: «${nextTask.title}».`;
-  }
-  $("miaInsight").textContent=insight;
+  const totalAccounts=["current","obligations","safe","growth"].reduce((s,id)=>s+account(id).balance,0);
 
   $("homeAccounts").innerHTML=["current","obligations","safe","growth"].map(id=>{
     const a=account(id),m=ACCOUNT_META[id],pct=totalAccounts?Math.round(a.balance/totalAccounts*100):0;
@@ -740,7 +729,7 @@ function renderSettingsPage(){
 }
 
 window.exportData=async()=>{
-  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.6",...state};
+  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.7",...state};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`MIA-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 };
 async function undoLast(){

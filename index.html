@@ -42,21 +42,10 @@
 
 <!-- HOME -->
 <section class="page active" id="home">
-  <div class="mia-home-signature">
-    <div class="mia-home-logo"><svg class="mia-logo-svg" viewBox="0 0 48 48" aria-hidden="true">
-  <defs>
-    <linearGradient id="miaG" x1="7" y1="7" x2="41" y2="41" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#42e6a4"/><stop offset="1" stop-color="#39d7e8"/>
-    </linearGradient>
-  </defs>
-  <rect x="3.5" y="3.5" width="41" height="41" rx="13.5" fill="url(#miaG)"/>
-  <path d="M12.5 32V16.2c0-1.4 1.7-2.1 2.7-1.1L24 24l8.8-8.9c1-1 2.7-.3 2.7 1.1V32"
-        fill="none" stroke="#03110f" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="36.5" cy="11.5" r="3.1" fill="#03110f"/>
-</svg></div>
-    <div><b>MIA</b><small>Money · Work · Time</small></div>
-  </div>
-  <div class="hello home-welcome"><span>سلام ایمان 👋</span><h1 id="miaInsight">امروز روی مهم‌ترین کار تمرکز کن.</h1></div>
+  <div class="hello home-welcome home-welcome-compact"><span>سلام ایمان 👋</span></div>
+
+  <div class="section-head home-today-head"><h2>کارهای امروز</h2><button onclick="switchPage('planner');openPlannerTab('tasks')">مشاهده همه</button></div>
+  <div class="panel compact-list home-task-card home-task-card-top" id="homeTasks"></div>
 
   <button class="quick-entry-card" onclick="openQuick()">
     <span class="quick-entry-icon" data-icon="plus"></span>
@@ -77,26 +66,18 @@
     <div class="donut home-donut" id="homeIncomeDonut"><span id="homeIncomeDonutText">۰</span></div>
   </div>
 
-  <div class="home-two-col">
-    <div>
-      <div class="section-head compact"><h2>کارهای امروز</h2><button onclick="switchPage('planner');openPlannerTab('tasks')">مشاهده همه</button></div>
-      <div class="panel compact-list home-task-card" id="homeTasks"></div>
+  <div class="section-head compact"><h2>هورسان</h2><button onclick="switchPage('work');openWorkTab('hoorsun')">جزئیات</button></div>
+  <div class="panel home-hoorsun-card home-hoorsun-card-wide">
+    <div class="home-hoorsun-top">
+      <div class="ring mini-ring" id="homeReelRing"><strong id="homeReels">۰ / ۱۲</strong><small>ریلز</small></div>
+      <div><b id="homeReelWeek">این هفته ۰ / ۳</b><small id="homeReelRemain">۱۲ ریلز باقی مانده</small></div>
     </div>
-    <div>
-      <div class="section-head compact"><h2>هورسان</h2><button onclick="switchPage('work');openWorkTab('hoorsun')">جزئیات</button></div>
-      <div class="panel home-hoorsun-card">
-        <div class="home-hoorsun-top">
-          <div class="ring mini-ring" id="homeReelRing"><strong id="homeReels">۰ / ۱۲</strong><small>ریلز</small></div>
-          <div><b id="homeReelWeek">این هفته ۰ / ۳</b><small id="homeReelRemain">۱۲ ریلز باقی مانده</small></div>
-        </div>
-        <div class="home-stage-row">
-          <span id="homeStageShoot" data-icon="camera"></span>
-          <i></i>
-          <span id="homeStageEdit" data-icon="scissors"></span>
-          <i></i>
-          <span id="homeStageUpload" data-icon="upload"></span>
-        </div>
-      </div>
+    <div class="home-stage-row">
+      <span id="homeStageShoot" data-icon="camera"></span>
+      <i></i>
+      <span id="homeStageEdit" data-icon="scissors"></span>
+      <i></i>
+      <span id="homeStageUpload" data-icon="upload"></span>
     </div>
   </div>
 
@@ -297,7 +278,7 @@
 
   <div class="settings-group-title">درباره MIA</div>
   <div class="panel settings-list">
-    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v0.8.6</b><small>دستیار مالی، کاری و برنامه‌ریزی شخصی ایمان</small></div></div>
+    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v0.8.7</b><small>دستیار مالی، کاری و برنامه‌ریزی شخصی ایمان</small></div></div>
   </div>
 </section>
 

@@ -1,7 +1,7 @@
 {
   "name": "MIA — دستیار شخصی ایمان",
   "short_name": "MIA",
-  "description": "MIA v0.8.6 — Smart Tasks, Notifications & Motion",
+  "description": "MIA v0.8.7 — Home cleanup",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

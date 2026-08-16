@@ -333,3 +333,35 @@ button:active,.settings-row:active{transform:scale(.975)}
 @media(prefers-reduced-motion:reduce){
   .mia-action b,.mia-logo-svg circle{animation:none!important}
 }
+
+
+/* ==========================================================
+   MIA v0.8.7 — Home cleanup
+   ========================================================== */
+.mia-home-signature{display:none!important}
+.home-welcome-compact{
+  padding-top:10px;
+  margin-bottom:2px;
+}
+.home-welcome-compact span{
+  font-size:13px;
+  font-weight:700;
+  color:var(--green);
+}
+.home-today-head{
+  margin-top:14px;
+}
+.home-task-card-top{
+  min-height:auto;
+  max-height:226px;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  margin-bottom:12px;
+}
+.home-task-card-top::-webkit-scrollbar{display:none}
+.home-hoorsun-card-wide{
+  width:100%;
+  min-height:150px;
+}
