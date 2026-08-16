@@ -1,4 +1,4 @@
-import {get,putQuiet,snapshotDB,restoreSnapshot,pruneLogs} from "./db.js?v=120";
+import {get,putQuiet,snapshotDB,restoreSnapshot,pruneLogs} from "./db.js?v=130";
 
 const DEFAULT_CONFIG={
   owner:"ImanDk",

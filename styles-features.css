@@ -1567,3 +1567,73 @@ button:disabled{
   .tx-row{grid-template-columns:34px minmax(0,1fr) auto 30px!important}
   .tx-manage{width:29px;height:29px}
 }
+
+/* ===== MIA v1.3.0 · user-friendly redesign ===== */
+:root{--ux-text:14px;--ux-muted:12px}
+body{font-size:var(--ux-text)}
+.section-head h2{font-size:17px!important}.section-head>span,.section-head button{font-size:11.5px!important}
+.page-title h1{font-size:24px!important}.page-title p{font-size:12px!important;line-height:1.7}
+.quick-entry-card b{font-size:16px!important}.quick-entry-card small{font-size:12px!important;line-height:1.65}
+.home-welcome{font-size:18px}
+
+/* Home is a snapshot, not another dashboard. */
+.home-account-grid-clean{display:block!important;padding:0;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.018);overflow:hidden}
+.home-balance-summary,.home-account-line{width:100%;border:0;background:transparent;color:var(--text);font-family:inherit;text-align:right}
+.home-balance-summary{min-height:76px;padding:14px 15px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.home-balance-summary span{display:block;color:var(--muted);font-size:11px}.home-balance-summary strong{display:block;font-size:22px;margin-top:2px}
+.home-account-line{display:grid;grid-template-columns:10px 1fr auto 38px;align-items:center;gap:8px;padding:11px 15px;border-bottom:1px solid rgba(255,255,255,.045)}
+.home-account-line:last-child{border-bottom:0}.home-account-line b{font-size:13px}.home-account-line strong{font-size:13px}.home-account-line small{font-size:10px;color:var(--muted);text-align:left}
+.account-line-dot{width:8px;height:8px;border-radius:50%;background:var(--account-color)}
+
+/* Finance: overview answers two questions only: what can I spend and where is my money. */
+.finance-hero-simple{display:grid!important;grid-template-columns:1fr 1fr!important;gap:0!important;padding:0!important;overflow:hidden}
+.finance-hero-simple>div{padding:14px 15px}.finance-hero-simple>div+div{border-right:1px solid var(--line)}
+.finance-hero-simple span{font-size:11px;color:var(--muted)}.finance-hero-simple strong{display:block;font-size:20px;margin:4px 0}.finance-hero-simple small{font-size:10px;color:var(--muted)}
+.money-accounts{gap:8px!important}.money-card{min-height:116px!important;padding:13px!important}.money-card b{font-size:12px!important}.money-card strong{font-size:16px!important}.money-card small{font-size:10px!important;line-height:1.5}
+.attention-panel{border-color:rgba(244,191,98,.22)!important;background:linear-gradient(180deg,rgba(244,191,98,.055),rgba(255,255,255,.018))!important}
+.attention-copy{padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:4px}.attention-copy b{display:block;font-size:13px}.attention-copy small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+.income-summary-panel{padding:14px}.income-legend .legend-row small{font-size:10px!important}.source-card small{font-size:10px!important}
+
+/* Work prioritizes the next action. */
+.next-action-card{padding:16px;margin-bottom:10px;border-color:rgba(66,230,164,.22);background:linear-gradient(160deg,rgba(66,230,164,.075),rgba(255,255,255,.018) 60%)}
+.next-action-top{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center}.next-action-icon{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;color:var(--green);background:rgba(66,230,164,.10)}.next-action-icon svg{width:23px;height:23px}
+.next-action-top small{font-size:10px;color:var(--green)}.next-action-top h2{font-size:18px;margin:2px 0}.next-action-top p{font-size:11px;color:var(--muted);margin:0;line-height:1.7}
+.next-action-button{margin-top:14px!important}
+.mini-stepper{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}.mini-stepper span{display:grid;grid-template-columns:9px 1fr;align-items:center;gap:6px;padding:7px 8px;border-radius:11px;background:rgba(255,255,255,.022);color:var(--muted)}.mini-stepper i{width:8px;height:8px;border-radius:50%;border:1px solid #58716c}.mini-stepper b{font-size:9px}.mini-stepper span.done{color:var(--green);background:rgba(66,230,164,.055)}.mini-stepper span.done i{background:var(--green);border-color:var(--green)}
+.cycle-mini{padding:13px 14px;margin-bottom:10px}.cycle-mini>div:first-child{display:flex;align-items:center;justify-content:space-between}.cycle-mini span{font-size:11px;color:var(--muted)}.cycle-mini strong{font-size:16px}.cycle-mini-bar{height:6px!important;background:rgba(255,255,255,.055);border-radius:99px;overflow:hidden;margin:9px 0!important}.cycle-mini-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--green),var(--cyan));border-radius:inherit}.cycle-mini>small{font-size:10px;color:var(--muted)}
+.report-reset-cycle{margin:10px 0 12px!important}
+.work-source-picker>div b{font-size:13px!important}.work-source-picker>div small{font-size:10px!important}.compact-select{font-size:13px!important}
+
+/* Transaction lists read like statements; management lives inside details. */
+.tx-row-button{width:100%;border:0;background:transparent;color:var(--text);font-family:inherit;text-align:right;cursor:pointer;grid-template-columns:38px minmax(0,1fr) auto 18px!important;padding:11px 2px!important}
+.tx-row-button+.tx-row-button{border-top:1px solid var(--line)}.tx-copy b{font-size:12.5px!important}.tx-copy small{font-size:10px!important}.tx-amount{font-size:12.5px!important}.tx-chevron{width:17px;height:17px;color:#6f8b86}.tx-chevron svg{width:16px;height:16px}
+.transaction-detail-amount{font-size:30px;font-weight:700;direction:rtl;text-align:center;padding:16px 8px 20px}.transaction-detail-amount.income{color:var(--green)}.transaction-detail-amount.expense{color:#ff9b9b}
+.detail-list{border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:13px}.detail-list>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 13px;background:rgba(255,255,255,.018)}.detail-list>div+div{border-top:1px solid var(--line)}.detail-list span{font-size:11px;color:var(--muted)}.detail-list b{font-size:12px;text-align:left;max-width:65%;overflow-wrap:anywhere}
+
+/* MIA always shows what it understood before committing. */
+.understood-card{padding:13px 14px;border-radius:17px;border:1px solid rgba(57,215,232,.17);background:linear-gradient(145deg,rgba(57,215,232,.06),rgba(66,230,164,.025));margin-bottom:12px}.understood-card span{font-size:10px;color:var(--cyan)}.understood-card b{display:block;font-size:17px;margin-top:3px}.understood-card small{display:block;font-size:10px;color:var(--muted);margin-top:5px;line-height:1.7}
+.interpretation-sheet .field-label{font-size:11px!important;margin-top:10px}.interpretation-sheet .text-input,.interpretation-sheet .money-input input{font-size:14px!important}.interpretation-sheet .ghost{margin-top:7px!important}
+
+/* Friendly confirmation replaces browser-native confirm dialogs. */
+.confirm-sheet{text-align:center;padding-bottom:max(18px,env(safe-area-inset-bottom))}.confirm-icon{width:50px;height:50px;border-radius:17px;display:grid;place-items:center;margin:2px auto 10px;background:rgba(255,107,115,.08);color:#ff9292}.confirm-icon svg{width:24px;height:24px}.confirm-sheet h2{font-size:19px;margin:0}.confirm-sheet p{font-size:12px;color:var(--muted);line-height:1.8;margin:7px 0 15px}.confirm-primary{background:linear-gradient(145deg,#ff7079,#ff9292)!important;color:#230406!important}
+
+/* Settings: simple first, technical second. */
+.settings-accordion-friendly{gap:9px}.settings-collapse>summary>div b{font-size:13px!important}.settings-collapse>summary>div small{font-size:10px!important}.settings-row b{font-size:12.5px!important}.settings-row small{font-size:10px!important;line-height:1.55}
+.advanced-settings{border-top:1px solid var(--line);padding:9px 0 0;margin-top:2px}.advanced-settings>summary{font-size:11px;color:var(--muted);padding:9px 2px;cursor:pointer}.advanced-settings .settings-list{border:0!important}
+.work-visibility-list{border-top:1px solid var(--line);padding:4px 0 8px}.visibility-row{display:flex;align-items:center;justify-content:space-between;min-height:48px;padding:0 3px;border-bottom:1px solid rgba(255,255,255,.04);position:relative}.visibility-row:last-child{border-bottom:0}.visibility-row span{font-size:12.5px}.visibility-row input{position:absolute;opacity:0;pointer-events:none}.visibility-row i{width:42px;height:24px;border-radius:99px;background:#263b38;position:relative;transition:.2s}.visibility-row i:after{content:"";position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:#8ba09c;transition:.2s}.visibility-row input:checked+i{background:rgba(66,230,164,.24)}.visibility-row input:checked+i:after{right:21px;background:var(--green)}
+
+/* Expense flow has explicit progress. */
+#expenseAmountStep{font-size:10px!important}.expense-description-input{font-size:14px!important}.field-label{font-size:11px!important}.muted{font-size:10.5px!important;line-height:1.7}
+
+/* Calendar terminology and readability. */
+.planner-main-tabs button{font-size:11.5px!important}.selected-day-help,.sheet-date{font-size:10.5px!important}.event-row b,.list-row b{font-size:12.5px!important}.event-row small,.list-row small{font-size:10px!important}
+
+/* Fewer visible boxes: use space/dividers for secondary lists. */
+.transaction-list,.compact-list.timeline{background:rgba(255,255,255,.012)!important}.settings-list{background:transparent!important}.panel{box-shadow:none!important}
+
+@media(max-width:390px){
+  .finance-hero-simple strong{font-size:17px}.finance-hero-simple>div{padding:12px}
+  .home-balance-summary strong{font-size:19px}.home-account-line{grid-template-columns:9px 1fr auto 32px;padding:10px 12px}
+  .next-action-top{grid-template-columns:42px 1fr}.next-action-icon{width:41px;height:41px}.next-action-top h2{font-size:16px}
+  .mini-stepper b{font-size:8px}.transaction-detail-amount{font-size:25px}
+}

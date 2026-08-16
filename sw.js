@@ -1,8 +1,8 @@
-const CACHE="mia-v120-manual-allocation-clean-ui";
+const CACHE="mia-v130-user-friendly-redesign";
 const FILES=[
-  "./","./index.html","./styles.css?v=120","./styles-features.css?v=120","./app.js?v=120","./db.js?v=120","./planner.js?v=120",
-  "./sync.js?v=120","./core.js?v=120","./actions.js?v=120","./finance-store.js?v=120","./self-test.js?v=120",
-  "./boot.js?v=120","./manifest.json","./mia-logo.png","./favicon.png","./apple-touch-icon.png","./icon-192.png","./icon-512.png","./setup-ios.html"
+  "./","./index.html","./styles.css?v=130","./styles-features.css?v=130","./app.js?v=130","./db.js?v=130","./planner.js?v=130",
+  "./sync.js?v=130","./core.js?v=130","./actions.js?v=130","./finance-store.js?v=130","./self-test.js?v=130",
+  "./boot.js?v=130","./manifest.json","./mia-logo.png","./favicon.png","./apple-touch-icon.png","./icon-192.png","./icon-512.png","./setup-ios.html"
 ];
 
 self.addEventListener("install",event=>{

@@ -1,5 +1,5 @@
-import {openDB,notifyDataChanged} from "./db.js?v=120";
-import {PROFILE_ID,newId} from "./core.js?v=120";
+import {openDB,notifyDataChanged} from "./db.js?v=130";
+import {PROFILE_ID,newId} from "./core.js?v=130";
 
 function reqP(req){return new Promise((resolve,reject)=>{req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||new Error("IndexedDB request failed"))})}
 function txP(tx){return new Promise((resolve,reject)=>{tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error||new Error("Finance transaction failed"));tx.onabort=()=>reject(tx.error||new Error("Finance transaction aborted"))})}

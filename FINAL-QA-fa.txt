@@ -1,22 +1,17 @@
-MIA v1.2.0 — QA Summary
+MIA v1.3.0 — QA Summary
 
-PASS:
-- Syntax تمام فایل‌های JavaScript اصلی با node --check
-- qa.mjs نسخه 1.2.0
-- عدم وجود Duplicate HTML ID
-- CSP بدون unsafe-inline در script-src
-- حفظ IndexedDB: nova_core_v06 / Version 3
-- ثبت Income جدید بدون تغییر Accounts تا تأیید کاربر
-- Editable Manual Allocation برای چهار حساب
-- سازگاری با Incomeهای ثبت‌شده در v1.1.x
-- ویرایش و حذف Expense / Income با اصلاح Atomic موجودی‌ها
-- مرحله Description برای هزینه‌ها به‌جز Cigarette
-- امکان صفر کردن دستی موجودی هر حساب بدون حذف حساب
-- Work Source Picker و Settings Accordion برای کاهش شلوغی
-- Service Worker cache: mia-v120-manual-allocation-clean-ui
-- Asset cache query: ?v=120
-- GitHub encrypted backup logic حفظ شده است
-
-محدودیت محیط ساخت:
-- تست ساختاری و کد کامل انجام شده است.
-- مرورگر Headless این محیط دسترسی localhost/file را به‌دلیل Policy سازمانی مسدود می‌کند، بنابراین Screenshot Runtime از مرورگر محیط ساخت تولید نشد.
+PASS — JavaScript syntax check برای تمام فایل‌های JS/MJS.
+PASS — qa.mjs بدون خطا اجرا شد.
+PASS — هیچ ID تکراری در index.html وجود ندارد.
+PASS — تمام IDهای مستقیم مورد استفاده app.js در DOM وجود دارند.
+PASS — هیچ confirm() بومی مرورگر در app.js باقی نمانده است.
+PASS — Quick Entry دارای مرحله MIA فهمید و تأیید قبل از ثبت است.
+PASS — ثبت درآمد قبل از تأیید بودجه‌بندی حساب‌ها را تغییر نمی‌دهد.
+PASS — هزینه غیرسیگار دارای مرحله اجباری شرح است؛ سیگار bypass می‌شود.
+PASS — تراکنش‌ها صفحه جزئیات و سپس ویرایش/حذف دارند.
+PASS — Home، Finance، Work، Calendar و Settings ساختار UX جدید دارند.
+PASS — حوزه‌های کاری قابل مخفی‌سازی هستند و حداقل یک حوزه حفظ می‌شود.
+PASS — DB identity حفظ شده: nova_core_v06 / version 3.
+PASS — Service Worker cache: mia-v130-user-friendly-redesign.
+PASS — Asset cache query: ?v=130.
+PASS — سرور استاتیک محلی index.html را با HTTP 200 سرو کرد.
