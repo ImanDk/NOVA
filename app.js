@@ -104,7 +104,7 @@ async function init(){
   await openDB();await seed();await load();await ensureDefaultThursdays();await load();
   $("todayLabel").textContent=pFull(new Date());
   renderAll();installInteractionGuards();wireMode();
-  $("dbStatus").textContent="MIA v0.8.8 آماده است";
+  $("dbStatus").textContent="MIA v0.8.9 آماده است";
 }
 async function seed(){
   for(const [id,m] of Object.entries(ACCOUNT_META)){
@@ -261,6 +261,20 @@ function renderWork(){
   [["shoot","stageShoot"],["edit","stageEdit"],["upload","stageUpload"]].forEach(([k,id])=>$(id)?.classList.toggle("done",!!stage[k]));
   $("reelsList").innerHTML=reels.length?reels.slice().reverse().map((r,i)=>`<div class="list-row reel-history-row"><span class="row-icon" data-icon="check"></span><div><b>ریلز ${fa(reels.length-i)} هورسان</b><small>${pFull(new Date(r.at))}</small></div><span class="status-pill">تکمیل</span></div>`).join(""):empty("برای ثبت اولین ریلز، سه مرحله را به‌ترتیب تکمیل کن.");
   const sn=monthTx("income").filter(t=>t.source==="snapp");$("snappMonth").innerHTML=`<div class="allocation-item"><div><b>درآمد ثبت‌شده</b><small>${fa(sn.length)} ثبت</small></div><span>${toman(sum(sn,x=>x.amount))}</span></div>`;
+
+  const hirsaDone=state.tasks
+    .filter(t=>t.done&&taskCategory(t)==="hirsa")
+    .sort((a,b)=>(b.doneAt||b.createdAt||0)-(a.doneAt||a.createdAt||0));
+  const hirsaMonthDone=hirsaDone.filter(t=>samePersianMonth(new Date(t.doneAt||t.createdAt),new Date()));
+
+  if($("hirsaDoneCount"))$("hirsaDoneCount").textContent=fa(hirsaDone.length);
+  if($("hirsaDoneMonthCount"))$("hirsaDoneMonthCount").textContent=`${fa(hirsaMonthDone.length)} مورد`;
+  if($("hirsaDoneList")){
+    $("hirsaDoneList").innerHTML=hirsaDone.length
+      ?hirsaDone.slice(0,5).map(hirsaWorkDoneRow).join("")
+      :empty("هنوز کار انجام‌شده‌ای برای هیرسا ثبت نشده.");
+  }
+
   hydrateIcons();
 }
 function renderProjects(){
@@ -382,6 +396,25 @@ function taskDate(t){return t.dueISO?new Date(t.dueISO):new Date(t.createdAt||no
 function tasksForDate(d,includeDone=true){return state.tasks.filter(t=>(includeDone||!t.done)&&isSameDay(taskDate(t),d))}
 function samePersianMonth(a,b){const x=pParts(a),y=pParts(b);return x.year===y.year&&x.month===y.month}
 function monthLabel(d){return new Intl.DateTimeFormat("fa-IR-u-ca-persian",{month:"long",year:"numeric"}).format(d)}
+
+
+function hirsaWorkDoneRow(t){
+  const d=new Date(t.doneAt||t.createdAt);
+  return `<article class="hirsa-done-row">
+    <span class="hirsa-done-row-icon" data-icon="check"></span>
+    <div>
+      <b>${esc(t.title)}</b>
+      <small>${pFull(d)} · ${new Intl.DateTimeFormat("fa-IR",{hour:"2-digit",minute:"2-digit"}).format(d)}</small>
+    </div>
+    <span class="hirsa-done-status">انجام شد</span>
+  </article>`
+}
+window.openHirsaDone=()=>{
+  doneCategoryFilter="hirsa";
+  switchPage("planner");
+  openPlannerTab("done");
+  renderTasks();
+};
 
 function renderPlanner(){
   $("monthTitle").textContent=pMonthTitle(planner.anchor);$("selectedDate").textContent=pFull(planner.selected);
@@ -808,7 +841,7 @@ function renderSettingsPage(){
 }
 
 window.exportData=async()=>{
-  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.8",...state};
+  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.9",...state};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`MIA-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 };
 async function undoLast(){

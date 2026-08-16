@@ -193,6 +193,24 @@
     <div class="source-hero panel"><span>حقوق ثابت ماهانه</span><strong>۲۵ میلیون تومان</strong><small>پرداخت معمول: روزهای ۲۸ تا ۳۰</small></div>
     <div class="info-card warning"><b>درآمد پروژه‌ای هیرسا</b><p>تا زمان واریز واقعی، در بودجه و پول قابل خرج محاسبه نمی‌شود.</p></div>
     <button class="primary" onclick="openQuick('income','hirsa')">ثبت دریافت حقوق هیرسا</button>
+
+    <div class="section-head hirsa-done-head">
+      <div><h2>کارهای انجام‌شده هیرسا</h2><small>آخرین فعالیت‌های ثبت‌شده</small></div>
+      <button onclick="openHirsaDone()">مشاهده همه</button>
+    </div>
+
+    <div class="hirsa-done-summary panel">
+      <div class="hirsa-done-count">
+        <span class="hirsa-done-icon" data-icon="check"></span>
+        <div><strong id="hirsaDoneCount">۰</strong><small>کار انجام‌شده</small></div>
+      </div>
+      <div class="hirsa-done-month">
+        <span>این ماه</span>
+        <b id="hirsaDoneMonthCount">۰ مورد</b>
+      </div>
+    </div>
+
+    <div class="hirsa-done-list" id="hirsaDoneList"></div>
   </div>
 
   <div class="work-pane" id="work-snapp">
@@ -278,7 +296,7 @@
 
   <div class="settings-group-title">درباره MIA</div>
   <div class="panel settings-list">
-    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v0.8.8</b><small>دستیار مالی، کاری و برنامه‌ریزی شخصی ایمان</small></div></div>
+    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v0.8.9</b><small>دستیار مالی، کاری و برنامه‌ریزی شخصی ایمان</small></div></div>
   </div>
 </section>
 
