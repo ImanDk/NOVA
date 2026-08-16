@@ -12,12 +12,13 @@
 <meta name="apple-mobile-web-app-title" content="MIA">
 <title>MIA</title>
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=112">
+<link rel="icon" type="image/png" href="favicon.png?v=112">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=110">
-<link rel="stylesheet" href="styles-features.css?v=110">
+<link rel="stylesheet" href="styles.css?v=112">
+<link rel="stylesheet" href="styles-features.css?v=112">
 </head>
 <body>
 <div class="app-health-banner" id="appHealthBanner" hidden>
@@ -28,17 +29,7 @@
 <main class="app">
 <header class="topbar">
   <div class="brand">
-    <div class="brand-mark mia-logo-mark"><svg class="mia-logo-svg" viewBox="0 0 48 48" aria-hidden="true">
-  <defs>
-    <linearGradient id="miaG" x1="7" y1="7" x2="41" y2="41" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#42e6a4"/><stop offset="1" stop-color="#39d7e8"/>
-    </linearGradient>
-  </defs>
-  <rect x="3.5" y="3.5" width="41" height="41" rx="13.5" fill="url(#miaG)"/>
-  <path d="M12.5 32V16.2c0-1.4 1.7-2.1 2.7-1.1L24 24l8.8-8.9c1-1 2.7-.3 2.7 1.1V32"
-        fill="none" stroke="#03110f" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="36.5" cy="11.5" r="3.1" fill="#03110f"/>
-</svg></div>
+    <div class="brand-mark mia-logo-mark"><img class="mia-logo-img" src="mia-logo.png?v=112" alt="MIA"></div>
     <div><b>MIA</b><small id="todayLabel">دستیار مالی و کاری · Iman Dk</small></div>
   </div>
   <div class="top-actions">
@@ -282,24 +273,14 @@
   </div>
 
   <div class="settings-profile panel">
-    <div class="settings-avatar mia-settings-logo"><svg class="mia-logo-svg" viewBox="0 0 48 48" aria-hidden="true">
-  <defs>
-    <linearGradient id="miaGSettings" x1="7" y1="7" x2="41" y2="41" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#42e6a4"/><stop offset="1" stop-color="#39d7e8"/>
-    </linearGradient>
-  </defs>
-  <rect x="3.5" y="3.5" width="41" height="41" rx="13.5" fill="url(#miaGSettings)"/>
-  <path d="M12.5 32V16.2c0-1.4 1.7-2.1 2.7-1.1L24 24l8.8-8.9c1-1 2.7-.3 2.7 1.1V32"
-        fill="none" stroke="#03110f" stroke-width="4.1" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="36.5" cy="11.5" r="3.1" fill="#03110f"/>
-</svg></div>
+    <div class="settings-avatar mia-settings-logo"><img class="mia-logo-img" src="mia-logo.png?v=112" alt="MIA"></div>
     <div><b>Iman Dk</b><small>حساب اصلی MIA · دستیار شخصی مالی و کاری</small></div>
     <div class="settings-balance"><span>کل موجودی ثبت‌شده</span><strong id="settingsTotalBalance">۰ تومان</strong></div>
   </div>
 
   <div class="settings-group-title">حساب و همگام‌سازی</div>
   <div class="panel cloud-account-card">
-    <div class="cloud-account-avatar"><span data-icon="user"></span></div>
+    <div class="cloud-account-avatar mia-cloud-logo"><img class="mia-logo-img" src="mia-logo.png?v=112" alt="MIA"></div>
     <div class="cloud-account-copy">
       <b>Iman Dk</b>
       <small id="cloudAccountStatus">ذخیره محلی فعال · GitHub هنوز متصل نیست</small>
@@ -335,7 +316,7 @@
 
   <div class="settings-group-title">درباره MIA</div>
   <div class="panel settings-list">
-    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v1.1.0</b><small>نسخه پایدار دستیار شخصی Iman Dk</small></div></div>
+    <div class="settings-static"><span class="settings-row-icon" data-icon="info"></span><div><b>MIA v1.1.2</b><small>نسخه پایدار دستیار شخصی Iman Dk</small></div></div>
   </div>
 </section>
 
@@ -447,7 +428,7 @@
 <div class="overlay" id="amountSheet" data-action="closeOverlay(event,&#x27;amountSheet&#x27;)">
   <div class="sheet" data-action="stopPropagation">
     <div class="handle"></div><div class="sheet-title"><div><span class="accent">ثبت هزینه</span><h2 id="amountCategoryTitle">مبلغ را وارد کن</h2></div><button data-action="closeSheet(&#x27;amountSheet&#x27;)">×</button></div>
-    <div class="money-input"><input id="amountInput" inputmode="decimal" placeholder="مثلاً 140 یا 1.5"><span>تومان</span></div>
+    <div class="money-input"><input id="amountInput" data-money-input="true" inputmode="numeric" placeholder="مثلاً 125,000"><span>تومان</span></div>
     <button class="primary big" data-action="saveQuickExpense()">ثبت هزینه</button>
   </div>
 </div>
@@ -470,7 +451,7 @@
     <label class="field-label">نام بانک / کارت این حساب</label>
     <input class="text-input" id="accountBankInput" placeholder="مثلاً ملت، پاسارگاد، سامان...">
     <label class="field-label account-balance-label">موجودی واقعی بانک</label>
-    <div class="money-input"><input id="accountBalanceInput" inputmode="decimal"><span>تومان</span></div>
+    <div class="money-input"><input id="accountBalanceInput" data-money-input="true" inputmode="numeric" placeholder="مثلاً 25,000,000"><span>تومان</span></div>
     <p class="muted account-note">این عدد فقط موجودی همین حساب را اصلاح می‌کند و درآمد یا هزینه جدید محسوب نمی‌شود.</p>
     <button class="primary big" data-action="saveAccountBalance()">ذخیره و تطبیق با بانک</button>
   </div>
@@ -500,11 +481,11 @@
   <div class="sheet" data-action="stopPropagation">
     <div class="handle"></div><div class="sheet-title"><div><span class="accent">پروژه فریلنس</span><h2>پروژه جدید</h2></div><button data-action="closeSheet(&#x27;projectSheet&#x27;)">×</button></div>
     <input class="text-input" id="projectTitle" placeholder="نام پروژه">
-    <input class="text-input" id="projectValue" inputmode="decimal" placeholder="ارزش پروژه، مثلاً 25 میلیون">
+    <input class="text-input" id="projectValue" data-money-input="true" inputmode="numeric" placeholder="ارزش پروژه، مثلاً 25,000,000">
     <button class="primary big" data-action="saveProject()">ثبت پروژه</button>
   </div>
 </div>
 
 <div class="toast" id="toast"><span id="toastText"></span><button id="toastAction"></button></div>
-<script type="module" src="app.js?v=110"></script><script type="module" src="boot.js?v=110"></script>
+<script type="module" src="app.js?v=112"></script><script type="module" src="boot.js?v=112"></script>
 </body></html>

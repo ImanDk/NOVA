@@ -215,14 +215,50 @@ button:active,.settings-row:active{transform:scale(.975)}
 @keyframes miaActionFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 
 /* MIA identity */
-.mia-logo-mark{padding:0!important;background:none!important;box-shadow:none!important;overflow:visible}
-.mia-logo-svg{width:100%;height:100%;display:block;filter:drop-shadow(0 8px 18px rgba(57,215,232,.16))}
-.mia-logo-svg circle{transform-origin:36.5px 11.5px;animation:miaLogoDot 2.8s ease-in-out infinite}
-@keyframes miaLogoDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.72)}}
+.mia-logo-mark{
+  padding:0!important;
+  background:none!important;
+  box-shadow:none!important;
+  overflow:visible;
+}
+.mia-logo-img{
+  width:100%;
+  height:100%;
+  display:block;
+  object-fit:contain;
+  pointer-events:none;
+  filter:drop-shadow(0 7px 16px rgba(57,215,232,.16));
+}
+.brand-mark.mia-logo-mark .mia-logo-img{
+  transform:scale(1.14);
+}
+.mia-settings-logo{
+  padding:0!important;
+  background:none!important;
+  overflow:visible;
+}
+.mia-settings-logo .mia-logo-img{
+  width:62px;
+  height:62px;
+  max-width:none;
+  transform:scale(1.08);
+}
+.mia-cloud-logo{
+  padding:0!important;
+  overflow:visible!important;
+  background:none!important;
+  box-shadow:none!important;
+}
+.mia-cloud-logo .mia-logo-img{
+  width:48px;
+  height:48px;
+  max-width:none;
+  transform:scale(1.12);
+}
 .mia-home-signature{display:flex;align-items:center;gap:9px;margin:6px 2px 2px;opacity:.94}
 .mia-home-logo{width:34px;height:34px}
-.mia-home-signature b{font-size:15px;letter-spacing:.12em}.mia-home-signature small{display:block;color:var(--muted);font-size:7.5px;letter-spacing:.08em;margin-top:1px}
-.mia-settings-logo{padding:0!important;background:none!important}.mia-settings-logo .mia-logo-svg{width:56px;height:56px}
+.mia-home-signature b{font-size:15px;letter-spacing:.12em}
+.mia-home-signature small{display:block;color:var(--muted);font-size:7.5px;letter-spacing:.08em;margin-top:1px}
 
 /* Notification center */
 .notification-btn i{

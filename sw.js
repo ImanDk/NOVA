@@ -1,4 +1,4 @@
-const CACHE="mia-v110-final-hardened";
+const CACHE="mia-v112-new-logo";
 const FILES=[
   "./","./index.html","./styles.css?v=110","./styles-features.css?v=110","./app.js?v=110","./db.js?v=110","./planner.js?v=110",
   "./sync.js?v=110","./core.js?v=110","./actions.js?v=110","./finance-store.js?v=110","./self-test.js?v=110",

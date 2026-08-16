@@ -1,7 +1,7 @@
 {
   "name": "MIA — دستیار Iman Dk",
   "short_name": "MIA",
-  "description": "MIA v1.1.0 Final Hardened — atomic finance, conflict-safe encrypted backup, modular core",
+  "description": "MIA v1.1.2 — approved modern brand logo across PWA and identity surfaces",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -12,12 +12,14 @@
     {
       "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }

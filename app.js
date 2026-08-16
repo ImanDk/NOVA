@@ -6,25 +6,19 @@ import {
   restoreFromGitHub,getRecoveryKey,setCloudAutoEnabled,disconnectCloud
 } from "./sync.js?v=110";
 
-import {PROFILE_ID,PROFILE_NAME,newId,escapeHtml,actionExpr} from "./core.js?v=110";
-import {installActionDelegation} from "./actions.js?v=110";
-import {runPureSelfTests} from "./self-test.js?v=110";
-import {recordExpenseAtomic,recordIncomeAtomic,confirmAllocationAtomic,recordTransferAtomic,reconcileAccountAtomic,undoExpenseAtomic} from "./finance-store.js?v=110";
+import {PROFILE_ID,PROFILE_NAME,newId,escapeHtml,actionExpr} from "./core.js?v=112";
+import {installActionDelegation} from "./actions.js?v=112";
+import {formatMoneyInteger,formatMoneyInputValue,bindMoneyInputs} from "./money-format.js?v=112";
+import {runPureSelfTests} from "./self-test.js?v=112";
+import {recordExpenseAtomic,recordIncomeAtomic,confirmAllocationAtomic,recordTransferAtomic,reconcileAccountAtomic,undoExpenseAtomic} from "./finance-store.js?v=112";
 
-const APP_VERSION="1.1.0";
+const APP_VERSION="1.1.2";
 
 
 const $=id=>document.getElementById(id);
 const fa=n=>new Intl.NumberFormat("fa-IR",{maximumFractionDigits:1}).format(Number(n)||0);
-const toman=n=>{
-  n=Number(n)||0;
-  let value;
-  if(Math.abs(n)>=1_000_000_000)value=`${fa(n/1_000_000_000)} میلیارد`;
-  else if(Math.abs(n)>=1_000_000)value=`${fa(n/1_000_000)} میلیون`;
-  else if(Math.abs(n)>=1_000)value=`${fa(n/1_000)} هزار`;
-  else value=fa(n);
-  return `${value} تومان`;
-};
+const moneyNumber=n=>formatMoneyInteger(Number(n)||0);
+const toman=n=>`${moneyNumber(n)} تومان`;
 const esc=escapeHtml;
 const norm=s=>parseFaDigits(String(s||"")).replace(/ي/g,"ی").replace(/ك/g,"ک").replace(/[٬,]/g,"").replace(/\s+/g," ").trim().toLowerCase();
 const now=()=>Date.now();
@@ -183,6 +177,7 @@ async function init(){
   $("todayLabel").textContent=`دستیار مالی و کاری · ${PROFILE_NAME}`;
   renderAll();
   installInteractionGuards();
+  bindMoneyInputs(document);
   wireMode();
 
   try{
@@ -299,6 +294,7 @@ function renderAll(){
   if(lastRenderFailures){
     showHealthBanner("بخشی از MIA با خطا اجرا شد",`${fa(lastRenderFailures)} بخش ایزوله شد؛ اطلاعات ذخیره‌شده حذف نشده‌اند.`);
   }
+  bindMoneyInputs(document);
   return lastRenderFailures
 }
 function account(id){return state.accounts.find(a=>a.id===id)||{id,balance:0,...ACCOUNT_META[id]}}
@@ -1151,7 +1147,7 @@ window.openAccount=id=>{
   editingAccount=id;const a=account(id);
   $("accountSheetTitle").textContent=ACCOUNT_META[id].name;
   $("accountBankInput").value=a.bankName||"";
-  $("accountBalanceInput").value=a.balance?(a.balance/1_000_000):"";
+  $("accountBalanceInput").value=a.balance?formatMoneyInputValue(String(Math.round(a.balance))):"";
   openSheet("accountSheet");focusSheetField("accountBalanceInput")
 };
 window.saveAccountBalance=async()=>{
@@ -1196,7 +1192,7 @@ window.deleteCompletedTask=async id=>{
 };
 
 window.deleteTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;if(!confirm(`«${t.title}» حذف شود؟`))return;await remove("tasks",id);await load();renderAll();renderInlineDayItems();toast("کار حذف شد")};
-window.openProjectSheet=()=>{$("projectTitle").value="";$("projectValue").value="";openSheet("projectSheet")};
+window.openProjectSheet=()=>{$("projectTitle").value="";$("projectValue").value="";openSheet("projectSheet");bindMoneyInputs(document)};
 window.saveProject=async()=>{const title=$("projectTitle").value.trim();if(!title)return toast("نام پروژه را وارد کن.");const value=parseAmount($("projectValue").value,"income");await put("projects",{id:newId("project"),title,value,status:"فعال",createdAt:now()});await load();renderAll();closeSheet("projectSheet");toast("پروژه فریلنس ساخته شد ✓")};
 window.resetHoorsunCycle=async()=>{
   if(!confirm("چرخه فعلی هورسان آرشیو و چرخه جدید شروع شود؟"))return;
