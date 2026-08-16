@@ -1,7 +1,7 @@
 {
   "name": "MIA — دستیار مالی و کاری ایمان",
   "short_name": "MIA",
-  "description": "MIA v0.8.4 — فونت فارسی حرفه‌ای و دسته‌بندی هوشمند کارهای انجام‌شده",
+  "description": "MIA v0.8.5 — بازبینی کامل UX، متن‌ها، مالی، Quick Entry و کارهای انجام‌شده",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

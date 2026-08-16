@@ -224,3 +224,10 @@ input,textarea{font-weight:450}
   .done-cat-icon{width:40px;height:40px;border-radius:13px}
   .done-actions .mini-action{width:29px;height:29px}
 }
+
+/* MIA v0.8.5 UX audit polish */
+.notification-btn i{display:none}
+.quick-help{line-height:1.9}
+.selected-day-help{line-height:1.6}
+.settings-static small,.settings-row small{line-height:1.65}
+.stage-hint{max-width:95%}

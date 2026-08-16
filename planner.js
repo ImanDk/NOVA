@@ -37,15 +37,15 @@ export function nextWeekday(jsDay,hour=9,minute=0){
 }
 export function parseNaturalEvent(input){
   let q=parseFaDigits(input).replace(/ي/g,"ی").replace(/ك/g,"ک").replace(/\s+/g," ").trim();
-  const weekdays={"شنبه":6,"یکشنبه":0,"یک شنبه":0,"دوشنبه":1,"دو شنبه":1,"سه‌شنبه":2,"سه شنبه":2,"چهارشنبه":3,"چهار شنبه":3,"پنجشنبه":4,"پنج شنبه":4,"جمعه":5};
+  const weekdays=[["چهارشنبه",3],["چهار شنبه",3],["پنجشنبه",4],["پنج شنبه",4],["سه‌شنبه",2],["سه شنبه",2],["دوشنبه",1],["دو شنبه",1],["یکشنبه",0],["یک شنبه",0],["شنبه",6],["جمعه",5]];
   let hour=9,minute=0,tm=q.match(/ساعت\s*(\d{1,2})(?::(\d{1,2}))?/),date=null;
   if(tm){hour=Math.min(23,+tm[1]);minute=Math.min(59,+(tm[2]||0))}
   if(q.includes("فردا")){date=addDays(new Date(),1);date.setHours(hour,minute,0,0)}
   else if(q.includes("امروز")){date=new Date();date.setHours(hour,minute,0,0)}
-  else for(const [name,day] of Object.entries(weekdays))if(q.includes(name)){date=nextWeekday(day,hour,minute);break}
+  else for(const [name,day] of weekdays)if(q.includes(name)){date=nextWeekday(day,hour,minute);break}
   if(!date&&tm){date=new Date();date.setHours(hour,minute,0,0);if(date<=new Date())date=addDays(date,1)}
   if(!date)return null;
-  let title=q.replace(/ساعت\s*\d{1,2}(?::\d{1,2})?/,"").replace(/امروز|فردا|شنبه|یکشنبه|یک شنبه|دوشنبه|دو شنبه|سه‌شنبه|سه شنبه|چهارشنبه|چهار شنبه|پنجشنبه|پنج شنبه|جمعه/g,"").replace(/^(باید|که باید)\s*/,"").replace(/\s+/g," ").trim();
+  let title=q.replace(/ساعت\s*\d{1,2}(?::\d{1,2})?/,"").replace(/امروز|فردا|چهار[\s‌]?شنبه|پنج[\s‌]?شنبه|سه[\s‌]?شنبه|دو[\s‌]?شنبه|یک[\s‌]?شنبه|شنبه|جمعه/g,"").replace(/^(باید|که باید)\s*/,"").replace(/\s+/g," ").trim();
   if(!title)title="برنامه";
   return {title,startISO:date.toISOString(),durationMin:60,alertBeforeMin:60,type:"event"}
 }

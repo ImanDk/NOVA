@@ -16,7 +16,7 @@ const toman=n=>{
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
 const norm=s=>parseFaDigits(String(s||"")).replace(/ي/g,"ی").replace(/ك/g,"ک").replace(/[٬,]/g,"").replace(/\s+/g," ").trim().toLowerCase();
 const now=()=>Date.now();
-const monthKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+const monthKey=d=>{const p=pParts(d);return `${p.year}-${p.month}`};
 const isSameDay=(a,b)=>a.toDateString()===b.toDateString();
 const empty=t=>`<div class="empty">${t}</div>`;
 
@@ -42,6 +42,7 @@ edit:'<path d="M4 20h4l11-11-4-4L4 16v4Z"/><path d="m13 7 4 4"/>',
 download:'<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>',
 smartphone:'<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 18h4"/>',
 'chevron-left':'<path d="m15 18-6-6 6-6"/>',
+'chevron-right':'<path d="m9 18 6-6-6-6"/>',
 'arrow-up':'<path d="M12 19V5M7 10l5-5 5 5"/>',
 'arrow-down':'<path d="M12 5v14M7 14l5 5 5-5"/>',
 cigarette:'<path d="M3 15h14v4H3zM17 15h4v4h-4z"/><path d="M16 9c2 0 3-1 3-3s-1-3-3-3"/>',
@@ -103,7 +104,7 @@ async function init(){
   await openDB();await seed();await load();await ensureDefaultThursdays();await load();
   $("todayLabel").textContent=pFull(new Date());
   renderAll();wireMode();
-  $("dbStatus").textContent="MIA v0.8.4 آماده است";
+  $("dbStatus").textContent="MIA v0.8.5 آماده است";
 }
 async function seed(){
   for(const [id,m] of Object.entries(ACCOUNT_META)){
@@ -137,10 +138,17 @@ function weekReels(){
   const s=startOfWeek(new Date()),e=addDays(s,7);
   return currentCycleReels().filter(r=>new Date(r.at)>=s&&new Date(r.at)<e)
 }
+function nextPersianPayDate(payDay=29){
+  const now=new Date(),today=new Date(now);today.setHours(12,0,0,0);
+  for(let i=0;i<40;i++){
+    const d=addDays(today,i),day=Number(parseFaDigits(pParts(d).day));
+    if(day===payDay&&d>=today)return d
+  }
+  return addDays(today,30)
+}
 function daysToNextPay(){
-  const d=new Date(),pay=29,x=new Date(d.getFullYear(),d.getMonth(),pay,12);
-  if(d>x)x.setMonth(x.getMonth()+1);
-  return Math.max(1,Math.ceil((x-d)/86400000))
+  const now=new Date(),pay=nextPersianPayDate(29);
+  return Math.max(0,Math.ceil((pay-now)/86400000))
 }
 function renderAll(){renderHome();renderFinance();renderWork();renderPlanner();renderTasks();renderProjects();renderSettingsPage();hydrateIcons()}
 function renderHome(){
@@ -148,18 +156,18 @@ function renderHome(){
   const days=daysToNextPay(),daily=curr/days;
   const reels=currentCycleReels(),wr=weekReels(),reelPct=Math.min(100,reels.length/12*100);
   const open=state.tasks.filter(t=>!t.done&&isSameDay(taskDate(t),new Date())).sort((a,b)=>taskDate(a)-taskDate(b));
-  let insight="امروز وضعیتت تحت کنترله.";
-  const needWeek=Math.max(0,3-wr.length);
-  if(needWeek>0)insight=`برای هدف هورسان، این هفته ${fa(needWeek)} ریلز دیگه تکمیل کن.`;
-  else if(curr>0&&daily<500_000)insight="بودجه روزانه‌ات فشرده شده؛ خرج‌های اختیاری رو سبک‌تر نگه دار.";
-  else if(open.length)insight=`اول «${open[0].title}» رو جمع کن.`;
+  let insight="امروز وضعیتت تحت کنترل است.";
+  const needWeek=Math.max(0,3-wr.length),totalAccounts=["current","obligations","safe","growth"].reduce((s,id)=>s+account(id).balance,0);
+  if(curr<=0&&totalAccounts>0)insight="حساب جاری خالی است؛ قبل از خرج بعدی، موجودی حساب‌ها را بررسی کن.";
+  else if(curr>0&&daily<500_000)insight="بودجه روزانه محدود شده؛ هزینه‌های اختیاری را کمتر کن.";
+  else if(open.length)insight=`اول «${open[0].title}» را انجام بده.`;
+  else if(needWeek>0)insight=`برای هدف هورسان، این هفته ${fa(needWeek)} ریلز دیگر تکمیل کن.`;
   else{
     const nextTask=state.tasks.filter(t=>!t.done).sort((a,b)=>taskDate(a)-taskDate(b))[0];
     if(nextTask)insight=`کار بعدی: «${nextTask.title}».`;
   }
   $("miaInsight").textContent=insight;
 
-  const totalAccounts=["current","obligations","safe","growth"].reduce((s,id)=>s+account(id).balance,0);
   $("homeAccounts").innerHTML=["current","obligations","safe","growth"].map(id=>{
     const a=account(id),m=ACCOUNT_META[id],pct=totalAccounts?Math.round(a.balance/totalAccounts*100):0;
     return `<button class="home-account-card account-${id}" onclick="openAccount('${id}')">
@@ -179,7 +187,7 @@ function renderHome(){
   }).join("")||`<small>هنوز درآمدی ثبت نشده.</small>`;
   $("homeIncomeDonut").style.background=parts.length?`conic-gradient(${parts.join(",")})`:"rgba(255,255,255,.05)";
 
-  $("homeTasks").innerHTML=open.length?open.slice(0,3).map(taskRow).join(""):empty("کار بازی نداری.");
+  $("homeTasks").innerHTML=open.length?open.slice(0,3).map(taskRow).join(""):empty("فعلاً کاری در لیست باز نیست.");
 
   $("homeReels").textContent=`${fa(reels.length)} / ۱۲`;
   $("homeReelWeek").textContent=`این هفته ${fa(wr.length)} / ۳`;
@@ -253,7 +261,7 @@ function renderWork(){
   const reels=currentCycleReels(),wr=weekReels(),pct=Math.min(100,reels.length/12*100),value=reels.length*(25_000_000/12);
   $("reelRing").style.background=`conic-gradient(var(--green) 0 ${pct}%,rgba(255,255,255,.06) ${pct}% 100%)`;
   $("reelRingText").textContent=`${fa(reels.length)}/۱۲`;
-  $("reelValue").textContent=`${toman(value)} ارزش ایجادشده`;
+  $("reelValue").textContent=`${toman(value)} ارزش کار تکمیل‌شده`;
   $("weekReels").textContent=`${fa(wr.length)} / ۳`;
   $("cycleRemain").textContent=fa(Math.max(0,12-reels.length));
   const need=Math.max(0,3-wr.length);
@@ -262,12 +270,12 @@ function renderWork(){
   const doneStages=["shoot","edit","upload"].filter(k=>stage[k]).length;
   $("stageProgressText").textContent=`${fa(doneStages)} از ۳ مرحله`;
   [["shoot","stageShoot"],["edit","stageEdit"],["upload","stageUpload"]].forEach(([k,id])=>$(id)?.classList.toggle("done",!!stage[k]));
-  $("reelsList").innerHTML=reels.length?reels.slice().reverse().map((r,i)=>`<div class="list-row reel-history-row"><span class="row-icon" data-icon="check"></span><div><b>ریلز ${fa(reels.length-i)} هورسان</b><small>${pFull(new Date(r.at))}</small></div><span class="status-pill">تکمیل</span></div>`).join(""):empty("سه مرحله ریلز اول را تکمیل کن.");
+  $("reelsList").innerHTML=reels.length?reels.slice().reverse().map((r,i)=>`<div class="list-row reel-history-row"><span class="row-icon" data-icon="check"></span><div><b>ریلز ${fa(reels.length-i)} هورسان</b><small>${pFull(new Date(r.at))}</small></div><span class="status-pill">تکمیل</span></div>`).join(""):empty("برای ثبت اولین ریلز، سه مرحله را به‌ترتیب تکمیل کن.");
   const sn=monthTx("income").filter(t=>t.source==="snapp");$("snappMonth").innerHTML=`<div class="allocation-item"><div><b>درآمد ثبت‌شده</b><small>${fa(sn.length)} ثبت</small></div><span>${toman(sum(sn,x=>x.amount))}</span></div>`;
   hydrateIcons();
 }
 function renderProjects(){
-  $("projectsList").innerHTML=state.projects.length?state.projects.slice().reverse().map(p=>`<div class="project-card"><b>${esc(p.title)}</b><small>${p.value?toman(p.value):"بدون مبلغ"} · ${p.status||"فعال"}</small></div>`).join(""):empty("پروژه فریلنس فعالی نداری.")
+  $("projectsList").innerHTML=state.projects.length?state.projects.slice().reverse().map(p=>`<div class="project-card"><b>${esc(p.title)}</b><small>${p.value?toman(p.value):"بدون مبلغ"} · ${p.status||"فعال"}</small></div>`).join(""):empty("فعلاً پروژه فریلنس فعالی ثبت نشده.")
 }
 
 function localDateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
@@ -280,11 +288,11 @@ async function persistHoorsunStage(next){
 }
 window.toggleReelStage=async stage=>{
   if(stageLock)return;
-  if(currentCycleReels().length>=12)return toast("چرخه ۱۲ ریلزی کامل شده؛ اول چرخه جدید هورسان رو شروع کن.");
+  if(currentCycleReels().length>=12)return toast("چرخه ۱۲ ریلزی کامل شده؛ ابتدا چرخه جدید هورسان را شروع کن.");
   const cur={...(state.hoorsunStage||{shoot:false,edit:false,upload:false})};
 
-  if(stage==="edit"&&!cur.shoot)return toast("اول مرحله فیلم‌برداری رو تیک بزن.");
-  if(stage==="upload"&&!cur.edit)return toast("اول مرحله تدوین رو کامل کن.");
+  if(stage==="edit"&&!cur.shoot)return toast("ابتدا مرحله فیلم‌برداری را تکمیل کن.");
+  if(stage==="upload"&&!cur.edit)return toast("ابتدا مرحله تدوین را تکمیل کن.");
 
   if(stage==="shoot"&&cur.shoot){await persistHoorsunStage({shoot:false,edit:false,upload:false});return}
   if(stage==="edit"&&cur.edit){await persistHoorsunStage({shoot:true,edit:false,upload:false});return}
@@ -343,10 +351,10 @@ function eventRow(e){const d=new Date(e.startISO);return `<div class="event-row"
 function dayTaskRow(t){return `<div class="event-row task-event-row ${t.done?"completed":""}"><div class="event-time"><span data-icon="${t.done?"check":"briefcase"}"></span></div><div><b>${esc(t.title)}</b><small>${t.done?"انجام‌شده":"کار"}</small></div><div class="row-actions">${t.done?`<button class="mini-action" onclick="reopenTask(${JSON.stringify(t.id)})"><span data-icon="rotate-ccw"></span></button>`:`<button class="mini-action success" onclick="toggleTask(${JSON.stringify(t.id)})"><span data-icon="check"></span></button>`}<button class="mini-action danger" onclick="deleteTask(${JSON.stringify(t.id)})"><span data-icon="trash"></span></button></div></div>`}
 function renderTasks(){
   const open=state.tasks.filter(t=>!t.done).sort((a,b)=>taskDate(a)-taskDate(b)),done=state.tasks.filter(t=>t.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
-  $("taskList").innerHTML=open.length?open.map(taskRow).join(""):empty("کار بازی نداری.");renderDoneArchive(done);hydrateIcons()
+  $("taskList").innerHTML=open.length?open.map(taskRow).join(""):empty("فعلاً کاری در لیست باز نیست.");renderDoneArchive(done);hydrateIcons()
 }
 function renderDoneArchive(done){
-  const current=new Date(),currentDone=done.filter(t=>samePersianMonth(new Date(t.doneAt||t.createdAt),current)),currentOpen=state.tasks.filter(t=>!t.done&&samePersianMonth(taskDate(t),current)),currentEvents=state.events.filter(e=>samePersianMonth(new Date(e.startISO),current)),currentReels=currentCycleReels().filter(r=>samePersianMonth(new Date(r.at),current));
+  const current=new Date(),currentDone=done.filter(t=>samePersianMonth(new Date(t.doneAt||t.createdAt),current)),currentOpen=state.tasks.filter(t=>!t.done&&samePersianMonth(taskDate(t),current)),currentEvents=state.events.filter(e=>samePersianMonth(new Date(e.startISO),current)),currentReels=state.reels.filter(r=>samePersianMonth(new Date(r.at),current));
   $("monthlyDoneSummary").innerHTML=`<div class="month-summary panel"><div class="month-summary-head"><div><span>جمع‌بندی ${monthLabel(current)}</span><b>${fa(currentDone.length)} کار انجام‌شده</b></div><span class="summary-check" data-icon="check"></span></div><div class="summary-grid"><div><b>${fa(currentDone.length)}</b><span>انجام‌شده</span></div><div><b>${fa(currentOpen.length)}</b><span>باز</span></div><div><b>${fa(currentEvents.length)}</b><span>برنامه</span></div><div><b>${fa(currentReels.length)}</b><span>ریلز</span></div></div></div>`;
 
   const cats=["all","hirsa","hoorsun","freelance","personal","other"];
@@ -417,9 +425,9 @@ window.openSettings=()=>{switchPage("settingsPage");renderSettingsPage()};
 
 window.openQuick=(kind="",source="")=>{
   prefillIncomeSource=source||null;$("quickInput").value="";
-  if(kind==="income")$("quickInput").placeholder=`مثلاً: ۲۵ میلیون حقوق ${SOURCE_META[source]?.name||"هورسان"} اومد`;
+  if(kind==="income")$("quickInput").placeholder=`مثلاً: ۲۵ میلیون حقوق ${SOURCE_META[source]?.name||"هورسان"} واریز شد`;
   else if(kind==="expense")$("quickInput").placeholder="مثلاً: ۱۴۰ سیگار";
-  else $("quickInput").placeholder="مثلاً: ۱.۵ شام با کیمیا\nیا: امروز یه ریلز هورسان زدم";
+  else $("quickInput").placeholder="مثلاً: فردا سایت مشتری را اصلاح کنم\nیا: سه‌شنبه ساعت ۱۲ جلسه دارم";
   openSheet("quickSheet");setTimeout(()=>$("quickInput").focus(),180)
 };
 window.prefillQuick=t=>{$("quickInput").value=t;$("quickInput").focus()};
@@ -447,36 +455,55 @@ function categoryFrom(q){
 function sourceFrom(q){
   q=norm(q);if(q.includes("هورسان"))return"hoorsun";if(q.includes("هیرسا"))return"hirsa";if(q.includes("اسنپ"))return"snapp";if(/فریلنس|سایت|مشتری/.test(q))return"freelance";return prefillIncomeSource||"other"
 }
+function isEventIntent(q){return /ساعت\s*\d|جلسه|قرار|ملاقات|مصاحبه|نوبت|وقت دکتر|تماس تلفنی|تماس با/.test(q)}
+function isIncomeIntent(q){
+  if(/قسط|خرید|هزینه|پرداخت|واریز کردم|پرداخت کردم/.test(q))return false;
+  return /حقوق|درآمد|دریافتی|دستمزد|فروش|واریزی|اومد|آمد|به حسابم/.test(q)
+}
 window.submitQuick=async()=>{
-  const raw=$("quickInput").value.trim();if(!raw)return toast("یه چیزی بنویس تا ثبتش کنم.");
+  const raw=$("quickInput").value.trim();if(!raw)return toast("یک مورد بنویس تا ثبت کنم.");
   const q=norm(raw);
+
   if(q.includes("هورسان")&&/فیلم ?برداری|ضبط/.test(q)&&/انجام|زدم|تموم|تمام|تکمیل/.test(q)){await setReelStageDone("shoot");closeSheet("quickSheet");return}
   if(q.includes("هورسان")&&/تدوین|ادیت/.test(q)&&/انجام|زدم|تموم|تمام|تکمیل/.test(q)){await setReelStageDone("edit");closeSheet("quickSheet");return}
   if(q.includes("هورسان")&&/بارگذاری|آپلود/.test(q)&&/انجام|زدم|تموم|تمام|تکمیل/.test(q)){await setReelStageDone("upload");closeSheet("quickSheet");return}
-  if(q.includes("هورسان")&&/ریلز|ویدیو/.test(q)&&/تحویل دادم|کامل کردم|تکمیل کردم/.test(q)){await addReel(raw);closeSheet("quickSheet");return}
-  if(/حقوق|درآمد|واریز|اومد|آمد/.test(q)){
+  if(q.includes("هورسان")&&/ریلز|ویدیو/.test(q)&&/تحویل دادم|کامل کردم|تکمیل کردم|تموم کردم|تمام کردم/.test(q)){
+    closeSheet("quickSheet");toast("برای ثبت ریلز هورسان، سه مرحله فیلم‌برداری، تدوین و بارگذاری را جداگانه تکمیل کن.");return
+  }
+
+  if(isIncomeIntent(q)){
     const amount=parseAmount(q,"income");if(amount){await addIncome(amount,sourceFrom(q),raw);closeSheet("quickSheet");return}
   }
+
   if(/از\s+(جاری|تعهدات|ذخیره|اهداف)/.test(q)&&/به\s+(جاری|تعهدات|ذخیره|اهداف)/.test(q)){
     const amount=parseAmount(q);if(amount){await quickTransfer(q,amount);closeSheet("quickSheet");return}
   }
+
   const amount=parseAmount(q,"expense");
-  if(amount&&(/\d/.test(q))){await addExpense(amount,categoryFrom(q),raw);closeSheet("quickSheet");return}
+  if(amount&&(/\d/.test(q))){const ok=await addExpense(amount,categoryFrom(q),raw);if(ok!==false)closeSheet("quickSheet");return}
+
   if(isCompletedPhrase(q)){await addCompletedTask(raw);closeSheet("quickSheet");return}
-  const ev=parseNaturalEvent(raw);
-  if(ev){await put("events",{id:now(),...ev,createdAt:now()});await load();renderAll();closeSheet("quickSheet");toast("برنامه ثبت شد ✓");return}
-  if(/ایده|بعدا|بعداً|پارکینگ/.test(q)){await put("parking",{id:now(),text:raw,createdAt:now()});closeSheet("quickSheet");toast("در پارکینگ ذخیره شد.");return}
-  await put("tasks",{id:now(),title:raw,time:"امروز",dueISO:new Date().toISOString(),done:false,createdAt:now()});await load();renderAll();closeSheet("quickSheet");toast("به کارها اضافه شد ✓")
+
+  const dated=parseNaturalEvent(raw);
+  if(dated){
+    if(isEventIntent(q)){
+      await put("events",{id:now(),...dated,createdAt:now()});await load();renderAll();closeSheet("quickSheet");toast("برنامه زمان‌دار ثبت شد ✓");return
+    }
+    await put("tasks",{id:now(),title:dated.title,time:pFull(new Date(dated.startISO)),dueISO:dated.startISO,done:false,category:detectTaskCategory(dated.title),createdAt:now()});
+    await load();renderAll();closeSheet("quickSheet");toast("کار در تاریخ موردنظر ثبت شد ✓");return
+  }
+
+  await put("tasks",{id:now(),title:raw,time:"امروز",dueISO:new Date().toISOString(),done:false,category:detectTaskCategory(raw),createdAt:now()});await load();renderAll();closeSheet("quickSheet");toast("به فهرست کارهای باز اضافه شد ✓")
 };
-window.openAmount=cat=>{amountCategory=cat;$("amountCategoryTitle").textContent=state.budgets.find(b=>b.id===cat)?.name||"هزینه";$("amountInput").value="";openSheet("amountSheet");setTimeout(()=>$("amountInput").focus(),150)};
-window.saveQuickExpense=async()=>{const v=parseAmount($("amountInput").value);if(!v)return toast("مبلغ رو وارد کن.");await addExpense(v,amountCategory,state.budgets.find(b=>b.id===amountCategory)?.name||"هزینه");closeSheet("amountSheet")};
+
 async function addExpense(amount,category,note){
-  const id=now();const before=account("current").balance;
+  const id=now(),before=account("current").balance;
+  if(amount>before)return toast("موجودی حساب جاری برای این هزینه کافی نیست؛ ابتدا موجودی را تطبیق بده یا انتقال بین حساب‌ها را ثبت کن."),false;
   await put("transactions",{id,type:"expense",amount,category,note,accountId:"current",at:now()});
-  await put("accounts",{...account("current"),balance:Math.max(0,before-amount)});
+  await put("accounts",{...account("current"),balance:before-amount});
   lastUndo={kind:"expense",id,amount,before};await load();renderAll();
   const b=state.budgets.find(x=>x.id===category),spent=expenseSpent(category),remain=b?Math.max(0,b.monthlyLimit-spent):0;
-  toast(`${toman(amount)} → ${b?.name||"هزینه"} ثبت شد · باقی بودجه ${toman(remain)}`,"برگرداندن",undoLast)
+  toast(`${toman(amount)} در «${b?.name||"هزینه"}» ثبت شد · بودجه باقی‌مانده ${toman(remain)}`,"برگرداندن",undoLast);return true
 }
 async function addIncome(amount,source,note){
   const id=now();await put("transactions",{id,type:"income",amount,source,note,accountId:"current",at:now()});
@@ -522,14 +549,14 @@ function showAllocation(a){
 }
 window.confirmAllocation=async()=>{
   const a=pendingAllocation||[...state.allocations].sort((x,y)=>y.at-x.at).find(x=>!x.confirmed);if(!a)return closeSheet("allocationSheet");
-  // Income was initially deposited in current. Move suggested parts except current.
   const cur=account("current"),move=a.parts.obligations.amount+a.parts.safe.amount+a.parts.growth.amount;
-  await put("accounts",{...cur,balance:Math.max(0,cur.balance-move)});
+  if(cur.balance<move)return toast("موجودی حساب جاری برای تأیید این تقسیم کافی نیست؛ ابتدا موجودی بانک‌ها را تطبیق بده.");
+  await put("accounts",{...cur,balance:cur.balance-move});
   for(const id of ["obligations","safe","growth"])await put("accounts",{...account(id),balance:account(id).balance+a.parts[id].amount});
-  await put("incomeAllocations",{...a,confirmed:true,confirmedAt:now()});pendingAllocation=null;await load();renderAll();closeSheet("allocationSheet");toast("چهار حساب MIA با انتقال‌های بانکی هماهنگ شد ✓")
+  await put("incomeAllocations",{...a,confirmed:true,confirmedAt:now()});pendingAllocation=null;await load();renderAll();closeSheet("allocationSheet");toast("تقسیم درآمد با موجودی چهار حساب هماهنگ شد ✓")
 };
 async function addReel(note){
-  const reels=currentCycleReels();if(reels.length>=12)return toast("چرخه ۱۲ ریلزی کامل شده؛ از تنظیمات چرخه جدید رو شروع کن.");
+  const reels=currentCycleReels();if(reels.length>=12)return toast("چرخه ۱۲ ریلزی کامل شده؛ از بخش تنظیمات، چرخه جدید را شروع کن.");
   await put("reels",{id:now(),at:now(),status:"delivered",note,archived:false});await load();renderAll();
   const n=currentCycleReels().length,remain=12-n,wr=weekReels().length,need=Math.max(0,3-wr);
   toast(`ریلز ${fa(n)} از ۱۲ ثبت شد · ${fa(remain)} تا پایان چرخه · ${fa(need)} تا هدف این هفته`)
@@ -538,8 +565,9 @@ async function quickTransfer(q,amount){
   const map={"جاری":"current","تعهدات":"obligations","ذخیره":"safe","اهداف":"growth"};
   const fromName=Object.keys(map).find(x=>new RegExp(`از\\s+${x}`).test(q)),toName=Object.keys(map).find(x=>new RegExp(`به\\s+${x}`).test(q));
   if(!fromName||!toName)return toast("مبدأ یا مقصد انتقال مشخص نیست.");
-  const from=map[fromName],to=map[toName];await put("accounts",{...account(from),balance:Math.max(0,account(from).balance-amount)});await put("accounts",{...account(to),balance:account(to).balance+amount});
-  await put("transactions",{id:now(),type:"transfer",amount,from,to,note:`${fromName} → ${toName}`,at:now()});await load();renderAll();toast(`${toman(amount)} از ${fromName} به ${toName} منتقل شد`)
+  const from=map[fromName],to=map[toName],fromAccount=account(from);if(fromAccount.balance<amount)return toast(`موجودی ${fromName} برای این انتقال کافی نیست.`);
+  await put("accounts",{...fromAccount,balance:fromAccount.balance-amount});await put("accounts",{...account(to),balance:account(to).balance+amount});
+  await put("transactions",{id:now(),type:"transfer",amount,from,to,note:`${fromName} → ${toName}`,at:now()});await load();renderAll();toast(`${toman(amount)} از ${fromName} به ${toName} منتقل شد ✓`)
 }
 window.openAccount=id=>{
   editingAccount=id;const a=account(id);
@@ -549,7 +577,7 @@ window.openAccount=id=>{
   openSheet("accountSheet");setTimeout(()=>$("accountBalanceInput").focus(),120)
 };
 window.saveAccountBalance=async()=>{
-  const raw=$("accountBalanceInput").value.trim();if(!raw)return toast("موجودی واقعی بانک رو وارد کن.");
+  const raw=$("accountBalanceInput").value.trim();if(!raw)return toast("موجودی واقعی بانک را وارد کن.");
   const amount=parseAmount(raw),bankName=$("accountBankInput").value.trim();
   await put("accounts",{...account(editingAccount),balance:amount,bankName});
   await load();renderAll();closeSheet("accountSheet");toast("موجودی و نام بانک هماهنگ شد ✓")
@@ -557,9 +585,9 @@ window.saveAccountBalance=async()=>{
 
 window.openEventSheet=()=>{editingEventId=null;$("eventModeLabel").textContent="برنامه جدید";$("eventSaveBtn").textContent="ثبت در تقویم";$("eventDateText").textContent=pFull(planner.selected);$("eventTitle").value="";$("eventTime").value="10:00";$("eventDuration").value="60";openSheet("eventSheet");setTimeout(()=>$("eventTitle").focus(),120)};
 window.editEvent=id=>{const e=state.events.find(x=>x.id===id);if(!e)return;editingEventId=id;const d=new Date(e.startISO);planner.selected=new Date(d);planner.anchor=new Date(d);$("eventModeLabel").textContent="ویرایش برنامه";$("eventSaveBtn").textContent="ذخیره تغییرات";$("eventDateText").textContent=pFull(d);$("eventTitle").value=e.title;$("eventTime").value=`${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;$("eventDuration").value=e.durationMin||60;openSheet("eventSheet")};
-window.saveEvent=async()=>{const title=$("eventTitle").value.trim();if(!title)return toast("عنوان رو وارد کن.");const [h,m]=($("eventTime").value||"10:00").split(":").map(Number),d=new Date(planner.selected);d.setHours(h,m,0,0);const old=editingEventId?state.events.find(x=>x.id===editingEventId):null;await put("events",{...(old||{}),id:old?.id||now(),title,startISO:d.toISOString(),durationMin:+$("eventDuration").value||60,alertBeforeMin:60,type:old?.type||"event",createdAt:old?.createdAt||now(),updatedAt:now(),defaultThursday:false});editingEventId=null;await load();planner.selected=d;planner.anchor=d;renderAll();closeSheet("eventSheet");toast(old?"تغییرات برنامه ذخیره شد ✓":"در برنامه ثبت شد ✓")};
+window.saveEvent=async()=>{const title=$("eventTitle").value.trim();if(!title)return toast("عنوان را وارد کن.");const [h,m]=($("eventTime").value||"10:00").split(":").map(Number),d=new Date(planner.selected);d.setHours(h,m,0,0);const old=editingEventId?state.events.find(x=>x.id===editingEventId):null;await put("events",{...(old||{}),id:old?.id||now(),title,startISO:d.toISOString(),durationMin:+$("eventDuration").value||60,alertBeforeMin:60,type:old?.type||"event",createdAt:old?.createdAt||now(),updatedAt:now(),defaultThursday:false});editingEventId=null;await load();planner.selected=d;planner.anchor=d;renderAll();closeSheet("eventSheet");toast(old?"تغییرات برنامه ذخیره شد ✓":"در برنامه ثبت شد ✓")};
 window.deleteEvent=async id=>{
-  const e=state.events.find(x=>x.id===id);if(!e)return;
+  const e=state.events.find(x=>x.id===id);if(!e)return;if(!confirm(`«${e.title}» حذف شود؟`))return;
   if(e.recurrenceKey&&e.source==="system-hoorsun"){
     const s=await get("settings","thursdayExceptions"),list=[...new Set([...(s?.value||[]),e.recurrenceKey])];
     await put("settings",{key:"thursdayExceptions",value:list})
@@ -567,12 +595,12 @@ window.deleteEvent=async id=>{
   await remove("events",id);await load();renderAll();toast("برنامه حذف شد")
 };
 window.openTaskSheet=()=>{$("taskTitle").value="";$("taskDateText").textContent=pFull(planner.selected);openSheet("taskSheet");setTimeout(()=>$("taskTitle").focus(),120)};
-window.saveTask=async()=>{const title=$("taskTitle").value.trim();if(!title)return;const d=new Date(planner.selected);d.setHours(9,0,0,0);await put("tasks",{id:now(),title,time:pFull(d),dueISO:d.toISOString(),done:false,category:detectTaskCategory(title),createdAt:now()});await load();renderAll();closeSheet("taskSheet");toast("کار اضافه شد ✓")};
-window.toggleTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;const category=t.category||detectTaskCategory(t.title);await put("tasks",{...t,category,done:true,doneAt:now()});await load();renderAll();toast(`انجام شد · دسته ${TASK_CATEGORY_META[category].name} ✓`)};
-window.reopenTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;await put("tasks",{...t,done:false,doneAt:null});await load();renderAll();openPlannerTab("tasks");toast("کار دوباره به لیست باز برگشت")};
-window.deleteTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;await remove("tasks",id);await load();renderAll();toast("کار حذف شد")};
+window.saveTask=async()=>{const title=$("taskTitle").value.trim();if(!title)return;const d=new Date(planner.selected);d.setHours(9,0,0,0);await put("tasks",{id:now(),title,time:pFull(d),dueISO:d.toISOString(),done:false,category:detectTaskCategory(title),createdAt:now()});await load();renderAll();closeSheet("taskSheet");toast("کار به فهرست باز اضافه شد ✓")};
+window.toggleTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;const category=t.category||detectTaskCategory(t.title);await put("tasks",{...t,category,done:true,doneAt:now()});await load();renderAll();toast(`انجام شد · در دسته «${TASK_CATEGORY_META[category].name}» ثبت شد ✓`)};
+window.reopenTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;await put("tasks",{...t,done:false,doneAt:null});await load();renderAll();openPlannerTab("tasks");toast("کار دوباره به فهرست باز برگشت")};
+window.deleteTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;if(!confirm(`«${t.title}» حذف شود؟`))return;await remove("tasks",id);await load();renderAll();toast("کار حذف شد")};
 window.openProjectSheet=()=>{$("projectTitle").value="";$("projectValue").value="";openSheet("projectSheet")};
-window.saveProject=async()=>{const title=$("projectTitle").value.trim();if(!title)return toast("نام پروژه رو وارد کن.");const value=parseAmount($("projectValue").value,"income");await put("projects",{id:now(),title,value,status:"فعال",createdAt:now()});await load();renderAll();closeSheet("projectSheet");toast("پروژه فریلنس ساخته شد ✓")};
+window.saveProject=async()=>{const title=$("projectTitle").value.trim();if(!title)return toast("نام پروژه را وارد کن.");const value=parseAmount($("projectValue").value,"income");await put("projects",{id:now(),title,value,status:"فعال",createdAt:now()});await load();renderAll();closeSheet("projectSheet");toast("پروژه فریلنس ساخته شد ✓")};
 window.resetHoorsunCycle=async()=>{
   if(!confirm("چرخه فعلی هورسان آرشیو و چرخه جدید شروع شود؟"))return;
   for(const r of currentCycleReels())await put("reels",{...r,archived:true,archivedAt:now()});
@@ -585,7 +613,7 @@ function renderSettingsPage(){
 }
 
 window.exportData=async()=>{
-  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.4",...state};
+  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.5",...state};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`MIA-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 };
 async function undoLast(){
