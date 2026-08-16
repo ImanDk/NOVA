@@ -1,15 +1,19 @@
-MIA v0.8.3 — Spec Complete
+MIA v0.8.4 — Done Categories + Persian Typography
 
-این نسخه بر اساس ۲۵ مورد نهایی تاییدشده ساخته شده است.
-فایل SPEC-CHECKLIST-fa.txt داخل ZIP وضعیت هر مورد را مشخص می‌کند.
+تغییرات:
+- فونت اصلی رابط: Vazirmatn با وزن‌های 400/500/600/700/800
+- fallback به Peyda و سپس فونت سیستم iPhone
+- هیچ فایل فونتی داخل ZIP قرار نگرفته است
+- Quick Entry جمله‌های انجام‌شده مثل «لوگو هیرسا ویرایش شد» را مستقیم به Done می‌فرستد
+- دسته‌بندی خودکار Done: هیرسا / هورسان / فریلنس / شخصی / سایر
+- فیلتر دسته‌ها با شمارنده
+- کارت‌های Done با آیکون، رنگ دسته، تاریخ/ساعت، وضعیت، بازگردانی و حذف
+- آرشیو ماهانه و جمع‌بندی قبلی حفظ شده
+- کارهایی که از لیست باز تیک می‌خورند هم خودکار دسته‌بندی می‌شوند
+- دیتابیس و اطلاعات نسخه قبل حفظ می‌شوند
 
-آدرس تست پس از آپلود:
-https://imandk.github.io/NOVA/?v=83
+Test:
+https://imandk.github.io/NOVA/?v=84
 
 Action Button:
-https://imandk.github.io/NOVA/?mode=quick&v=83
-
-نکات:
-- دیتابیس قبلی حفظ می‌شود.
-- Voice و Cloudflare وجود ندارند.
-- Reminder ساعت ۰۰:۰۰ از خود iOS Reminders تنظیم می‌شود.
+https://imandk.github.io/NOVA/?mode=quick&v=84

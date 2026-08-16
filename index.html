@@ -11,6 +11,9 @@
 <title>MIA</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -225,7 +228,8 @@
   </div>
   <div class="planner-pane" id="planner-done">
   <div id="monthlyDoneSummary"></div>
-  <div class="section-head"><h2>آرشیو انجام‌شده‌ها</h2><span>ماه‌به‌ماه</span></div>
+  <div class="section-head done-head"><div><h2>کارهای انجام‌شده</h2><small>دسته‌بندی هوشمند بر اساس متن کار</small></div><span>ماه‌به‌ماه</span></div>
+  <div class="done-filter-scroll" id="doneFilters"></div>
   <div id="doneList"></div>
 </div>
 </section>

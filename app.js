@@ -51,6 +51,10 @@ car:'<path d="M5 17h14l1-5-2-5H6l-2 5 1 5Z"/><path d="M7 17v2M17 17v2M6 12h12"/>
 wifi:'<path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1"/>',
 smile:'<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/>',
 'shopping-bag':'<path d="M5 8h14l-1 13H6L5 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+building:'<path d="M4 21V4h10v17M14 9h6v12M7 8h4M7 12h4M7 16h4M17 13h1M17 17h1M2 21h20"/>',
+sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.41M17.66 6.34l1.41-1.41"/>',
+laptop:'<rect x="4" y="4" width="16" height="12" rx="2"/><path d="M2 20h20M8 20l1-4h6l1 4"/>',
+user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
 'more-horizontal':'<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>'
 };
 function iconSvg(name){return `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]||ICONS["more-horizontal"]}</svg>`}
@@ -70,6 +74,15 @@ const SOURCE_META={
   freelance:{name:"فریلنس",color:"#8c9fff"},
   other:{name:"سایر",color:"#9baaa7"}
 };
+const TASK_CATEGORY_META={
+  hirsa:{name:"هیرسا",icon:"building",color:"#f4bf62",rgb:"244,191,98"},
+  hoorsun:{name:"هورسان",icon:"sun",color:"#42e6a4",rgb:"66,230,164"},
+  freelance:{name:"فریلنس",icon:"laptop",color:"#8c9fff",rgb:"140,159,255"},
+  personal:{name:"شخصی",icon:"user",color:"#39d7e8",rgb:"57,215,232"},
+  other:{name:"سایر",icon:"more-horizontal",color:"#9baaa7",rgb:"155,170,167"}
+};
+let doneCategoryFilter="all";
+
 const EXPENSE_CATS=[
   ["cigarette","سیگار","cigarette",4_200_000],
   ["kimia","کیمیا / رستوران","heart",15_000_000],
@@ -90,7 +103,7 @@ async function init(){
   await openDB();await seed();await load();await ensureDefaultThursdays();await load();
   $("todayLabel").textContent=pFull(new Date());
   renderAll();wireMode();
-  $("dbStatus").textContent="MIA v0.8.3 آماده است";
+  $("dbStatus").textContent="MIA v0.8.4 آماده است";
 }
 async function seed(){
   for(const [id,m] of Object.entries(ACCOUNT_META)){
@@ -293,6 +306,25 @@ async function setReelStageDone(stage){
   if(cur[stage])return toast("این مرحله قبلاً ثبت شده.");
   return toggleReelStage(stage)
 }
+function detectTaskCategory(text){
+  const q=norm(text);
+  if(/هیرسا|hirsa/.test(q))return"hirsa";
+  if(/هورسان|hoorsun|پنل خورشیدی|خورشیدی|سولار/.test(q))return"hoorsun";
+  if(/فریلنس|freelance|مشتری|طراحی سایت|سایت مشتری|پروژه مشتری|کارفرمای شخصی/.test(q))return"freelance";
+  if(/شخصی|خونه|خانه|کیمیا|ماشین|خودرو|خرید|دکتر|پزشک|خانواده|تفریح/.test(q))return"personal";
+  return"other"
+}
+function taskCategory(t){return t.category||detectTaskCategory(t.title||"")}
+function isCompletedPhrase(q){
+  return /انجام شد|انجام دادم|انجامش دادم|ویرایش شد|اصلاح شد|تمام شد|تموم شد|تکمیل شد|نهایی شد|فرستادم|ارسال شد|تحویل شد|آپلود شد|بارگذاری شد|منتشر شد|بسته شد|اوکی شد|حل شد|ثبت شد/.test(q)
+}
+async function addCompletedTask(title){
+  const category=detectTaskCategory(title),ts=now();
+  await put("tasks",{id:ts,title,time:"انجام‌شده",dueISO:new Date(ts).toISOString(),done:true,doneAt:ts,category,createdAt:ts,completedVia:"quick"});
+  await load();renderAll();openPlannerTab("done");
+  toast(`در «${TASK_CATEGORY_META[category].name}» به انجام‌شده‌ها اضافه شد ✓`)
+}
+
 function taskDate(t){return t.dueISO?new Date(t.dueISO):new Date(t.createdAt||now())}
 function tasksForDate(d,includeDone=true){return state.tasks.filter(t=>(includeDone||!t.done)&&isSameDay(taskDate(t),d))}
 function samePersianMonth(a,b){const x=pParts(a),y=pParts(b);return x.year===y.year&&x.month===y.month}
@@ -316,13 +348,46 @@ function renderTasks(){
 function renderDoneArchive(done){
   const current=new Date(),currentDone=done.filter(t=>samePersianMonth(new Date(t.doneAt||t.createdAt),current)),currentOpen=state.tasks.filter(t=>!t.done&&samePersianMonth(taskDate(t),current)),currentEvents=state.events.filter(e=>samePersianMonth(new Date(e.startISO),current)),currentReels=currentCycleReels().filter(r=>samePersianMonth(new Date(r.at),current));
   $("monthlyDoneSummary").innerHTML=`<div class="month-summary panel"><div class="month-summary-head"><div><span>جمع‌بندی ${monthLabel(current)}</span><b>${fa(currentDone.length)} کار انجام‌شده</b></div><span class="summary-check" data-icon="check"></span></div><div class="summary-grid"><div><b>${fa(currentDone.length)}</b><span>انجام‌شده</span></div><div><b>${fa(currentOpen.length)}</b><span>باز</span></div><div><b>${fa(currentEvents.length)}</b><span>برنامه</span></div><div><b>${fa(currentReels.length)}</b><span>ریلز</span></div></div></div>`;
-  if(!done.length){$("doneList").innerHTML=empty("هنوز کاری انجام نشده.");return}
-  const groups=new Map();done.forEach(t=>{const d=new Date(t.doneAt||t.createdAt),pp=pParts(d),key=`${pp.year}-${pp.month}`;if(!groups.has(key))groups.set(key,{label:monthLabel(d),items:[]});groups.get(key).items.push(t)});
-  $("doneList").innerHTML=[...groups.values()].map(g=>`<section class="done-month-group"><div class="done-month-title"><b>${g.label}</b><span class="month-closed"><i data-icon="check"></i>${fa(g.items.length)} کار جمع‌بندی‌شده</span></div><div class="panel compact-list">${g.items.map(doneRow).join("")}</div></section>`).join("")
-}
-function taskRow(t){return `<div class="list-row task-row"><button class="check-btn" onclick="toggleTask(${JSON.stringify(t.id)})"><span data-icon="check"></span></button><div><b>${esc(t.title)}</b><small>${pFull(taskDate(t))}</small></div><button class="mini-action danger" onclick="deleteTask(${JSON.stringify(t.id)})"><span data-icon="trash"></span></button></div>`}
-function doneRow(t){return `<div class="list-row done-row"><span class="check-btn done-check"><span data-icon="check"></span></span><div><b>${esc(t.title)}</b><small>${pFull(new Date(t.doneAt||t.createdAt))}</small></div><div class="row-actions"><button class="mini-action" onclick="reopenTask(${JSON.stringify(t.id)})"><span data-icon="rotate-ccw"></span></button><button class="mini-action danger" onclick="deleteTask(${JSON.stringify(t.id)})"><span data-icon="trash"></span></button></div></div>`}
 
+  const cats=["all","hirsa","hoorsun","freelance","personal","other"];
+  $("doneFilters").innerHTML=cats.map(id=>{
+    const count=id==="all"?done.length:done.filter(t=>taskCategory(t)===id).length;
+    const meta=id==="all"?{name:"همه",icon:"check"}:TASK_CATEGORY_META[id];
+    return `<button class="done-filter ${doneCategoryFilter===id?"active":""} ${id!=="all"?`cat-${id}`:""}" onclick="setDoneCategory('${id}')"><span data-icon="${meta.icon}"></span><b>${meta.name}</b><small>${fa(count)}</small></button>`
+  }).join("");
+
+  const filtered=doneCategoryFilter==="all"?done:done.filter(t=>taskCategory(t)===doneCategoryFilter);
+  if(!filtered.length){
+    const label=doneCategoryFilter==="all"?"هنوز کاری انجام نشده.":`هنوز کاری در دسته «${TASK_CATEGORY_META[doneCategoryFilter].name}» انجام نشده.`;
+    $("doneList").innerHTML=empty(label);hydrateIcons();return
+  }
+
+  const groups=new Map();
+  filtered.forEach(t=>{
+    const d=new Date(t.doneAt||t.createdAt),pp=pParts(d),key=`${pp.year}-${pp.month}`;
+    if(!groups.has(key))groups.set(key,{label:monthLabel(d),items:[]});
+    groups.get(key).items.push(t)
+  });
+  $("doneList").innerHTML=[...groups.values()].map(g=>`<section class="done-month-group"><div class="done-month-title"><b>${g.label}</b><span class="month-closed"><i data-icon="check"></i>${fa(g.items.length)} مورد</span></div><div class="done-card-list">${g.items.map(doneRow).join("")}</div></section>`).join("");
+  hydrateIcons()
+}
+window.setDoneCategory=id=>{doneCategoryFilter=id;renderTasks()};
+function taskRow(t){return `<div class="list-row task-row"><button class="check-btn" onclick="toggleTask(${JSON.stringify(t.id)})"><span data-icon="check"></span></button><div><b>${esc(t.title)}</b><small>${pFull(taskDate(t))}</small></div><button class="mini-action danger" onclick="deleteTask(${JSON.stringify(t.id)})"><span data-icon="trash"></span></button></div>`}
+function doneRow(t){
+  const cat=taskCategory(t),m=TASK_CATEGORY_META[cat],d=new Date(t.doneAt||t.createdAt);
+  return `<article class="done-card cat-${cat}">
+    <div class="done-cat-icon"><span data-icon="${m.icon}"></span></div>
+    <div class="done-card-copy">
+      <div class="done-card-top"><span class="done-category-badge">${m.name}</span><span class="done-status"><i data-icon="check"></i> انجام شد</span></div>
+      <b>${esc(t.title)}</b>
+      <small>${pFull(d)} · ${new Intl.DateTimeFormat("fa-IR",{hour:"2-digit",minute:"2-digit"}).format(d)}</small>
+    </div>
+    <div class="done-actions">
+      <button class="mini-action" onclick="reopenTask(${JSON.stringify(t.id)})" aria-label="بازگردانی"><span data-icon="rotate-ccw"></span></button>
+      <button class="mini-action danger" onclick="deleteTask(${JSON.stringify(t.id)})" aria-label="حذف"><span data-icon="trash"></span></button>
+    </div>
+  </article>`
+}
 
 window.switchPage=id=>{
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));$(id)?.classList.add("active");
@@ -339,7 +404,8 @@ window.openWorkTab=id=>{
 };
 window.openPlannerTab=id=>{
   document.querySelectorAll(".planner-pane").forEach(x=>x.classList.remove("active"));$("planner-"+id).classList.add("active");
-  document.querySelectorAll(".planner-main-tabs button").forEach(b=>b.classList.toggle("active",b.dataset.ptab===id))
+  document.querySelectorAll(".planner-main-tabs button").forEach(b=>b.classList.toggle("active",b.dataset.ptab===id));
+  if(id==="done"||id==="tasks")renderTasks()
 };
 window.selectDate=iso=>{planner.selected=new Date(iso);planner.anchor=new Date(iso);renderPlanner()};
 window.shiftMonth=dir=>{const {start,end}=monthCells(planner.anchor);planner.anchor=dir>0?addDays(end,1):addDays(start,-1);planner.selected=planner.anchor;renderPlanner()};
@@ -396,6 +462,7 @@ window.submitQuick=async()=>{
   }
   const amount=parseAmount(q,"expense");
   if(amount&&(/\d/.test(q))){await addExpense(amount,categoryFrom(q),raw);closeSheet("quickSheet");return}
+  if(isCompletedPhrase(q)){await addCompletedTask(raw);closeSheet("quickSheet");return}
   const ev=parseNaturalEvent(raw);
   if(ev){await put("events",{id:now(),...ev,createdAt:now()});await load();renderAll();closeSheet("quickSheet");toast("برنامه ثبت شد ✓");return}
   if(/ایده|بعدا|بعداً|پارکینگ/.test(q)){await put("parking",{id:now(),text:raw,createdAt:now()});closeSheet("quickSheet");toast("در پارکینگ ذخیره شد.");return}
@@ -500,9 +567,9 @@ window.deleteEvent=async id=>{
   await remove("events",id);await load();renderAll();toast("برنامه حذف شد")
 };
 window.openTaskSheet=()=>{$("taskTitle").value="";$("taskDateText").textContent=pFull(planner.selected);openSheet("taskSheet");setTimeout(()=>$("taskTitle").focus(),120)};
-window.saveTask=async()=>{const title=$("taskTitle").value.trim();if(!title)return;const d=new Date(planner.selected);d.setHours(9,0,0,0);await put("tasks",{id:now(),title,time:pFull(d),dueISO:d.toISOString(),done:false,createdAt:now()});await load();renderAll();closeSheet("taskSheet");toast("کار اضافه شد ✓")};
-window.toggleTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;await put("tasks",{...t,done:true,doneAt:now()});await load();renderAll();toast("انجام شد و به لیست انجام‌شده‌ها رفت ✓")};
-window.reopenTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;await put("tasks",{...t,done:false,doneAt:null});await load();renderAll();toast("کار دوباره باز شد")};
+window.saveTask=async()=>{const title=$("taskTitle").value.trim();if(!title)return;const d=new Date(planner.selected);d.setHours(9,0,0,0);await put("tasks",{id:now(),title,time:pFull(d),dueISO:d.toISOString(),done:false,category:detectTaskCategory(title),createdAt:now()});await load();renderAll();closeSheet("taskSheet");toast("کار اضافه شد ✓")};
+window.toggleTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;const category=t.category||detectTaskCategory(t.title);await put("tasks",{...t,category,done:true,doneAt:now()});await load();renderAll();toast(`انجام شد · دسته ${TASK_CATEGORY_META[category].name} ✓`)};
+window.reopenTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;await put("tasks",{...t,done:false,doneAt:null});await load();renderAll();openPlannerTab("tasks");toast("کار دوباره به لیست باز برگشت")};
 window.deleteTask=async id=>{const t=state.tasks.find(x=>x.id===id);if(!t)return;await remove("tasks",id);await load();renderAll();toast("کار حذف شد")};
 window.openProjectSheet=()=>{$("projectTitle").value="";$("projectValue").value="";openSheet("projectSheet")};
 window.saveProject=async()=>{const title=$("projectTitle").value.trim();if(!title)return toast("نام پروژه رو وارد کن.");const value=parseAmount($("projectValue").value,"income");await put("projects",{id:now(),title,value,status:"فعال",createdAt:now()});await load();renderAll();closeSheet("projectSheet");toast("پروژه فریلنس ساخته شد ✓")};
@@ -518,7 +585,7 @@ function renderSettingsPage(){
 }
 
 window.exportData=async()=>{
-  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.3",...state};
+  const data={exportedAt:new Date().toISOString(),version:"MIA 0.8.4",...state};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`MIA-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)
 };
 async function undoLast(){
